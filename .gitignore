@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+coverage/
+.vite/
+
+# Environment & secrets — never commit
+.env
+.env.*
+*.local
+
+# AutoClaw internal workspace
+.zwork/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Capacitor / Android build artifacts (source + workflows stay tracked)
+android/.gradle/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+
+# Keystores & signing — never commit
+*.keystore
+*.jks
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor
+.idea/
+.vscode/*
+!.vscode/extensions.json
