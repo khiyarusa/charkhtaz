@@ -510,6 +510,9 @@ export class App {
     });
     this.scene.showDebug = this.save.settings.showDebug;
     this.scene.resize();
+    if (import.meta.env.DEV) {
+      (window as unknown as { __charkhtaz?: unknown }).__charkhtaz = { scene: this.scene };
+    }
 
     this.buildGearSelector(car);
     this.hudEls.count.innerHTML = '<span>۳</span>';

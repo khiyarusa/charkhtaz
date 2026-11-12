@@ -185,7 +185,7 @@ export class AutoDrivetrain {
       this.meanWheelOmega = meanOmega;
     }
 
-    this.updateShiftSchedule(throttle);
+    this.updateShiftSchedule(throttle, vehicleSpeedMs);
 
     return {
       wheelTorqueNm: wheelTorque,
@@ -200,11 +200,18 @@ export class AutoDrivetrain {
   }
 
   /** Throttle-aware ratio schedule with kickdown; no scripted speed gates. */
-  private updateShiftSchedule(throttle: number): void {
+  private updateShiftSchedule(throttle: number, vehicleSpeedMs: number): void {
     const gear = this.gearbox.currentGear;
     if (gear <= 0 || this.gearbox.isShifting || this.shiftCooldownS > 0) return;
 
-    const rpm = this.engine.currentRpm;
+    // Shift decisions use the gearbox input (turbine) speed, not engine rpm:
+    // a slipping converter can pin the engine at redline while the car is
+    // barely moving, which otherwise leaves the box stuck in a tall gear.
+    const turbineRpm =
+      (Math.abs(vehicleSpeedMs) / this.wheelRadiusM) *
+      Math.abs(this.gearbox.ratio()) *
+      (60 / (2 * Math.PI));
+    const rpm = turbineRpm;
     const maxGear = this.gearbox.spec.gears.length;
     const wheelOmega = this.meanWheelOmega;
 

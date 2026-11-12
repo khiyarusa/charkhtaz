@@ -52,6 +52,21 @@ dev server and saved in `docs/visual-qa/`.
 10. **Flat, unreadable road** — added lane dashes, shoulder band, sand ripples,
     mud puddles, gravel speckle and 18 m delineator posts.
 
+## Full-route smoke drive
+
+`scripts/smoke-drive.mjs` drives the Prado on «کمربندی جنوبی» with the throttle
+pedal held from the countdown. After the fixes below it reaches the finish:
+
+```
+time 56.40 s · top speed 81 km/h · checkpoints 2/2 · damage 9 % · penalties +6 s
+results overlay shown with "رکورد جدید"
+```
+
+Two respawns were required by the run, hence the penalty. The route is
+completable; the automatic still spends too long in 1st under wheelspin and the
+suspension is bouncy after landings — both are tracked as handling issues, not
+as blockers.
+
 ## Known gaps (not claimed as done)
 
 - Multi-touch was validated with Playwright pointer events, **not on a physical

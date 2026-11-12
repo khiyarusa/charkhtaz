@@ -190,8 +190,10 @@ export class GameScene {
     this.paused = paused;
   }
 
-  respawn(reason = 'بازگشت به آخرین ایست') : void {
-    const x = Math.max(this.lastCheckpointX, this.vehicle.x - 6);
+  respawn(reason = 'بازگشت به آخرین ایست'): void {
+    // Always the last checkpoint, never a few metres behind the car: a respawn
+    // on a ramp lip leaves no run-up and can loop forever at a jump.
+    const x = this.lastCheckpointX;
     const ground = groundPointAt(this.track.runs, x) ??
       groundPointAt(this.track.runs, this.track.startX + 6);
     if (!ground) return;
@@ -200,6 +202,8 @@ export class GameScene {
     if (this.vehicle.manual) {
       this.vehicle.manual.gearbox.forceGear(1);
       this.vehicle.manual.engine.restart();
+    } else {
+      this.vehicle.auto?.selectRange(1);
     }
     this.penaltiesS += RESPAWN_PENALTY_S;
     this.stuckTimer = 0;

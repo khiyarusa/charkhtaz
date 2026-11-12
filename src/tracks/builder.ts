@@ -132,8 +132,8 @@ export class TrackBuilder {
       kind: 'rock',
       x,
       y: this.groundYApprox(x) + sizeM * 0.62,
-      halfWidth: sizeM * 0.7,
-      halfHeight: sizeM * 0.45,
+      halfWidth: sizeM * 0.75,
+      halfHeight: sizeM * 0.34,
     });
     return this;
   }
@@ -156,8 +156,8 @@ export class TrackBuilder {
       kind: 'tire-stack',
       x,
       y: this.groundYApprox(x) + sizeM * 0.5,
-      halfWidth: sizeM * 0.5,
-      halfHeight: sizeM * 0.35,
+      halfWidth: sizeM * 0.7,
+      halfHeight: sizeM * 0.22,
     });
     return this;
   }
@@ -215,9 +215,18 @@ export class TrackBuilder {
     const finishX = this.x;
     const lengthM = finishX - this.startX;
     const every = meta.checkpointEveryM ?? Math.max(80, lengthM / 3);
+    // Gaps between runs; a checkpoint just before a jump gives the player no
+    // run-up after a respawn, so those are dropped.
+    const gaps: [number, number][] = [];
+    for (let i = 1; i < this.runs.length; i++) {
+      const prevEnd = this.runs[i - 1]!.points[this.runs[i - 1]!.points.length - 1]!.x;
+      const start = this.runs[i]!.points[0]!.x;
+      if (start - prevEnd > 0.5) gaps.push([prevEnd, start]);
+    }
     const checkpointsX: number[] = [];
     for (let x = this.startX + every; x < finishX - 20; x += every) {
-      checkpointsX.push(Math.round(x));
+      const nearGap = gaps.some(([a, b]) => x > a - 45 && x < b + 12);
+      if (!nearGap) checkpointsX.push(Math.round(x));
     }
 
     let top = -Infinity;

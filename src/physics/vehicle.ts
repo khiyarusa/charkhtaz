@@ -99,6 +99,9 @@ export class Vehicle {
   private readonly bodyHalfHeight: number;
   private readonly bodyHalfLength: number;
   private readonly startY: number;
+  /** Chassis centre above ground at rest, metres. */
+  private readonly centerOffsetY: number;
+  private readonly anchorLocalY: number;
   private pedalState: PedalInputs = { throttle: 0, brake: 0, clutch: 0 };
   private lastSpeedMs = 0;
   private accelMs2 = 0;
@@ -128,7 +131,8 @@ export class Vehicle {
     const radius = n.wheelRadiusM;
     const restLength = Math.max(0.13, n.suspensionTravelM * 0.7);
     const clearance = restLength + radius - 0.28;
-    const centerY = groundY + Math.max(0.16, clearance) + halfH;
+    this.centerOffsetY = Math.max(0.16, clearance) + halfH;
+    const centerY = groundY + this.centerOffsetY;
 
     this.chassis = world.createBody({
       type: 'dynamic',
@@ -145,7 +149,8 @@ export class Vehicle {
 
     const frontX = n.wheelbaseM / 2;
     const rearX = -n.wheelbaseM / 2;
-    const anchorY = -halfH + 0.28;
+    this.anchorLocalY = -halfH + 0.28;
+    const anchorY = this.anchorLocalY;
 
     const layout = car.profile.layout;
     const axles: { side: 'front' | 'rear'; x: number; driven: boolean }[] = [
@@ -574,12 +579,18 @@ export class Vehicle {
 
   /** Put the car back on the route at x, upright. */
   respawnAt(x: number, groundY: number): void {
-    const y = groundY + this.bodyHalfHeight + 0.45;
+    const y = groundY + this.centerOffsetY;
     this.chassis.setTransform(Vec2(x, y), 0);
     this.chassis.setLinearVelocity(Vec2(0, 0));
     this.chassis.setAngularVelocity(0);
     for (const wheel of this.wheels) {
-      wheel.body.setTransform(Vec2(x + wheel.anchorX, y - wheel.restLengthM + 0.28), 0);
+      // Below the chassis anchor by the rest length, exactly as at spawn.
+      // Placing the wheel above the anchor leaves it in droop with zero load,
+      // so the car can spin its wheels but never move.
+      wheel.body.setTransform(
+        Vec2(x + wheel.anchorX, y + this.anchorLocalY - wheel.restLengthM),
+        0,
+      );
       wheel.body.setLinearVelocity(Vec2(0, 0));
       wheel.body.setAngularVelocity(0);
       wheel.omegaRadS = 0;

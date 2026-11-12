@@ -16,8 +16,8 @@ const jajrudPass = (): TrackDefinition => {
   b.flat(30, 'asphalt-wet');
   b.rock(0.7, b.cursorX + 12);
   b.flat(24);
-  b.ramp(16, 3.4);
-  b.gap(10);
+  b.ramp(16, 2.2);
+  b.gap(6);
   b.flat(46);
   b.slope(-4.5, 50, 'gravel');
   b.whoops(4, 34, 0.5);
@@ -54,12 +54,12 @@ const lutDunes = (): TrackDefinition => {
   b.flat(20);
   b.whoops(3, 30, 0.65, 'sand');
   b.flat(24);
-  b.ramp(18, 2.6, 'gravel');
-  b.gap(11);
+  b.ramp(18, 2.0, 'gravel');
+  b.gap(6);
   b.flat(40, 'sand');
   b.hill(50, 6, 'sand');
   b.flat(30);
-  b.log(0.3, b.cursorX + 10);
+  b.log(0.2, b.cursorX + 10);
   b.flat(60);
   b.scenery(0, 520, ['rock', 'bush', 'sign']);
   return b.build({
@@ -82,14 +82,14 @@ const hyrcanianMud = (): TrackDefinition => {
   b.patch(40, 'mud');
   b.hill(55, 3.5, 'mud');
   b.flat(26, 'dirt');
-  b.log(0.32, b.cursorX + 12);
+  b.log(0.2, b.cursorX + 12);
   b.flat(20, 'mud');
   b.whoops(5, 38, 0.45, 'dirt');
   b.flat(24);
   b.rock(0.65, b.cursorX + 12);
   b.flat(30, 'mud');
-  b.ramp(14, 2.2, 'dirt');
-  b.gap(7);
+  b.ramp(14, 2.0, 'dirt');
+  b.gap(4);
   b.flat(46, 'dirt');
   b.hill(40, 4.5, 'mud');
   b.flat(40);
@@ -112,13 +112,13 @@ const tehranIndustrial = (): TrackDefinition => {
   const b = new TrackBuilder(0, 0, 'asphalt-dry');
   b.flat(55);
   b.slope(0, 30);
-  b.block(0.6, 0.45, b.cursorX + 20);
+  b.block(1.2, 0.16, b.cursorX + 20);
   b.flat(30);
   b.patch(25, 'asphalt-wet');
   b.hill(40, 2.2);
   b.flat(35);
-  b.ramp(12, 1.8, 'asphalt-dry');
-  b.gap(6);
+  b.ramp(12, 1.4, 'asphalt-dry');
+  b.gap(4);
   b.flat(30);
   b.tires(0.65, b.cursorX + 14);
   b.flat(20);
@@ -176,18 +176,18 @@ const zagrosClimb = (): TrackDefinition => {
 const kavirDash = (): TrackDefinition => {
   const b = new TrackBuilder(0, 0, 'asphalt-dry');
   b.flat(70);
-  b.ramp(20, 3.0);
-  b.gap(14);
+  b.ramp(20, 1.8);
+  b.gap(7);
   b.flat(50, 'gravel');
-  b.ramp(18, 2.4);
-  b.gap(16);
+  b.ramp(18, 1.6);
+  b.gap(8);
   b.flat(45, 'sand');
   b.hill(50, 3.2, 'gravel');
   b.flat(30);
   b.whoops(2, 24, 1.1, 'sand');
   b.flat(30);
-  b.ramp(22, 3.6);
-  b.gap(20);
+  b.ramp(22, 2.0);
+  b.gap(9);
   b.flat(70, 'gravel');
   b.scenery(0, 560, ['rock', 'sign', 'bush']);
   return b.build({
