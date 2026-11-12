@@ -306,3 +306,36 @@ npm install phaser@4.2.1
 - `package.json` (read 2026-11-12) — TS ^7.0.2, Vite ^8.3.8, vitest ^5.1.0, planck ^1.5.1; no rendering engine installed yet
 
 **Known gaps in this research:** Phaser Pro on-page price unconfirmed; docs.phaser.io page-version labels not explicitly v4-marked (input/physics content corroborated by the v4 repo skills reference and package contents); AE runtime offline behavior verified at documentation level only; Persian text rendering untested.
+
+---
+
+## Implementation note (2026-11-12) — rendering deviates from the recommendation
+
+The research above recommends **Phaser 4.2.1**. The build that actually shipped
+this milestone uses **Planck.js + a custom Canvas 2D renderer and no Phaser**.
+
+Why the deviation:
+
+1. **One loop, one authority.** The game is a single side-view scene whose
+   bodies, joints and forces are all authored directly in Planck. Phaser would
+   add a second scene/update loop and a sprite system that must not apply force,
+   while the UI (three DOM sliders) already owns input. The integration would be
+   a wrapper around the same code, not a simplification.
+2. **Art control.** Cars are layered vector art whose wheel positions come from
+   the physics bodies and whose arches are cut with an even-odd path. Drawing
+   that through Phaser Graphics would duplicate the renderer, and shipping
+   raster atlases is not in place yet.
+3. **Offline bundle size.** The production bundle is ~309 kB (78 kB gzip) with
+   planck and Vazirmatn included. Phaser adds a ~1.3 MB dependency for features
+   this scene does not use.
+4. **Determinism.** The simulation and the renderer share one fixed step and one
+   camera model; there is no engine-level interpolation or input abstraction to
+   reconcile.
+
+Evidence: the production build output, src/render/renderer.ts,
+src/game/scene.ts, and the screenshots in docs/visual-qa/.
+
+This is reversible: the vehicle, track and save layers are engine-agnostic; only
+src/render/ and the scene loop know about canvas. If a later requirement makes
+Phaser mandatory, the simulation can be mounted inside a Phaser scene without
+touching the physics or the data.

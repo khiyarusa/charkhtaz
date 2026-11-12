@@ -112,7 +112,7 @@ const tehranIndustrial = (): TrackDefinition => {
   const b = new TrackBuilder(0, 0, 'asphalt-dry');
   b.flat(55);
   b.slope(0, 30);
-  b.block(0.6, 1.1, b.cursorX + 20);
+  b.block(0.6, 0.45, b.cursorX + 20);
   b.flat(30);
   b.patch(25, 'asphalt-wet');
   b.hill(40, 2.2);

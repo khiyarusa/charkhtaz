@@ -132,8 +132,8 @@ export class TrackBuilder {
       kind: 'rock',
       x,
       y: this.groundYApprox(x) + sizeM * 0.62,
-      halfWidth: sizeM * 0.9,
-      halfHeight: sizeM * 0.72,
+      halfWidth: sizeM * 0.7,
+      halfHeight: sizeM * 0.45,
     });
     return this;
   }
@@ -156,8 +156,8 @@ export class TrackBuilder {
       kind: 'tire-stack',
       x,
       y: this.groundYApprox(x) + sizeM * 0.5,
-      halfWidth: sizeM * 0.55,
-      halfHeight: sizeM * 0.5,
+      halfWidth: sizeM * 0.5,
+      halfHeight: sizeM * 0.35,
     });
     return this;
   }

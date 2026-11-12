@@ -56,9 +56,11 @@ export class AutoDrivetrain {
     this.substeps = Math.max(1, Math.floor(options.substeps ?? 8));
 
     const peakNm = engineSpec.torqueCurve.reduce((m, p) => Math.max(m, p.nm), 0);
-    // Full-throttle stall speed ≈ 2 200 rpm for every car; the converter is
-    // sized from the engine's own peak torque, so a torquey V6 stalls lower.
-    const stallOmega = rpmToRadS(2200);
+    // Converter sized from the engine's own peak torque so a torquey V6
+    // stalls lower. 2 600 rpm is the reference stall speed; the pump torque
+    // must stay below idle torque at idle or the engine would stall against
+    // its own converter with the brake held.
+    const stallOmega = rpmToRadS(2600);
     this.pumpC = peakNm / (stallOmega * stallOmega);
   }
 
@@ -121,11 +123,7 @@ export class AutoDrivetrain {
           : Math.max(0.25, 2 * this.pumpC * Math.max(engineOmega, 30));
 
         const omegaPump = Math.max(engineOmega, 0);
-        const pumpMax = Math.max(
-          18,
-          this.pumpC * omegaPump * omegaPump +
-            (this.engine.throttle < 0.05 ? this.spec.creepTorqueNm : 0),
-        );
+        const pumpMax = Math.max(18, this.pumpC * omegaPump * omegaPump);
         const cap = locked ? 4000 : Math.min(1.6 * pumpMax, 1600);
 
         const jAxle = (this.wheelInertia * n) / (ratio * ratio);
@@ -152,6 +150,15 @@ export class AutoDrivetrain {
 
       wheelTorque =
         ratio === 0 ? 0 : (turbineTorque * ratio * eff * shiftCut) / n;
+      // Creep: the converter pushes the car at closed throttle in a forward
+      // range. It is a wheel-side force, not extra pump capacity.
+      if (
+        ratio > 0 &&
+        throttle < 0.06 &&
+        Math.abs(vehicleSpeedMs) < 2.2
+      ) {
+        wheelTorque += this.spec.creepTorqueNm / n;
+      }
       lastRpm = this.engine.currentRpm;
 
       let traction = 0;

@@ -78,6 +78,18 @@ describe('Vehicle on flat asphalt', () => {
     expect(Number.isFinite(tele.rpm)).toBe(true);
   });
 
+  it('automatic keeps idling with the brake held', () => {
+    const { world, vehicle } = makeWorld('prado-150-2021');
+    for (let i = 0; i < 60 * 6; i++) {
+      vehicle.update(DT, { throttle: 0, brake: 1, clutch: 0 });
+      world.step(DT);
+    }
+    const tele = vehicle.telemetry;
+    expect(tele.engineRunning).toBe(true);
+    expect(tele.rpm).toBeGreaterThan(450);
+    expect(tele.rpm).toBeLessThan(1200);
+  });
+
   it('brakes to a near stop and wheels stay finite', () => {
     const { world, vehicle } = makeWorld('bmw-320i-g20');
 

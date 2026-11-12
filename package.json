@@ -9,7 +9,10 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cap:sync": "npm run build && cap sync android",
+    "android:debug": "npm run cap:sync && cd android && gradlew.bat assembleDebug",
+    "android:release": "npm run cap:sync && cd android && gradlew.bat bundleRelease"
   },
   "devDependencies": {
     "playwright": "^1.65.0",
