@@ -82,7 +82,7 @@ Automatic cars use R / N / D and a torque-converter model with lock-up.
 | Persian RTL UI | Implemented | `docs/visual-qa/01-home.png` … `09-pause.png` |
 | Tracks / biomes / obstacles | 6 routes, 4 biomes | `src/tracks/definitions.ts` |
 | Save + migration | Implemented | `src/save/storage.ts` |
-| Android shell | Platform added, CI workflow | `android/`, `.github/workflows/android.yml` |
+| Android package | CI-built debug APK + unsigned AAB, published | [v0.1.2 release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.2) · [evidence](docs/BUILD-EVIDENCE.md) |
 | Audio | **Not started** | — |
 | AI opponents | **Not started** | — |
 | Ghost / time-trial replay | **Not started** | — |
@@ -115,6 +115,9 @@ src/
 
 ## CI
 
+Latest green runs: [web CI](https://github.com/khiyarusa/charkhtaz/actions) ·
+[Android release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.2).
+
 | Workflow | Trigger | Does |
 | --- | --- | --- |
 | `.github/workflows/web.yml` | push / PR | `npm ci`, tests, typecheck + build, uploads `dist` |
@@ -131,6 +134,7 @@ store-ready build.
 - [`docs/VEHICLE_DATA_SOURCES.md`](docs/VEHICLE_DATA_SOURCES.md) — data provenance
 - [`docs/ART_BIBLE.md`](docs/ART_BIBLE.md) — art direction and asset rules
 - [`docs/QA-VISUAL.md`](docs/QA-VISUAL.md) — screenshot evidence and known gaps
+- [`docs/BUILD-EVIDENCE.md`](docs/BUILD-EVIDENCE.md) — CI runs, APK inspection, limits
 - [`docs/research/engine-decision.md`](docs/research/engine-decision.md) — engine choice + implementation note
 - [`AGENTS.md`](AGENTS.md) — working rules for contributors and agents
 
