@@ -44,7 +44,20 @@ and `./gradlew assembleDebug bundleRelease`, and uploaded `android-build`
 
 ## Published release
 
+**v0.3.0** — https://github.com/khiyarusa/charkhtaz/releases/tag/v0.3.0
+(commit `9a3a2d0`, `versionName 0.3.0`, `versionCode 30`)
+
+| Asset | Size | SHA-256 | Signing |
+| --- | --- | --- | --- |
+| `app-debug.apk` | 4 512 058 B | `6dc98375d74f7c99f479666db067af4de0a2db7602b2f229fb1b51b131e8a3b0` | debug-signed, installable |
+| `app-release.aab` | 3 354 789 B | `9414e236e59c43100ad1258a3257aef87249e5e42ef56be8de7bc72f0cc82797` | **unsigned** |
+
+CI on this tag: web https://github.com/khiyarusa/charkhtaz/actions/runs/43310261425
+and android https://github.com/khiyarusa/charkhtaz/actions/runs/43310269460 — both
+success.
+
 **v0.2.0** — https://github.com/khiyarusa/charkhtaz/releases/tag/v0.2.0
+
 
 | Asset | Size | SHA-256 | Signing |
 | --- | --- | --- | --- |
