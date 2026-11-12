@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CHARKHTAZ — pumpkin emblem for dark surfaces (transparent ground).
+  Same geometry as pumpkin-emblem.svg; no plate, oranges lifted so the
+  silhouette holds against #0D0F13.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="pkd-title pkd-desc">
+  <title id="pkd-title">CHARKHTAZ pumpkin emblem, dark ground</title>
+  <desc id="pkd-desc">A five-lobed pumpkin with a leaning stem and a swept pennant leaf. For graphite and dark imagery.</desc>
+
+  <defs>
+    <linearGradient id="pkd-body" gradientUnits="userSpaceOnUse" x1="140" y1="200" x2="396" y2="448">
+      <stop offset="0" stop-color="#F68C46"/>
+      <stop offset="0.55" stop-color="#E06626"/>
+      <stop offset="1" stop-color="#B84612"/>
+    </linearGradient>
+    <linearGradient id="pkd-stem" gradientUnits="userSpaceOnUse" x1="238" y1="160" x2="284" y2="160">
+      <stop offset="0" stop-color="#8FB168"/>
+      <stop offset="0.55" stop-color="#628649"/>
+      <stop offset="1" stop-color="#38552C"/>
+    </linearGradient>
+    <linearGradient id="pkd-leaf" gradientUnits="userSpaceOnUse" x1="290" y1="140" x2="392" y2="176">
+      <stop offset="0" stop-color="#688D4F"/>
+      <stop offset="1" stop-color="#446A36"/>
+    </linearGradient>
+    <linearGradient id="pkd-crease" gradientUnits="userSpaceOnUse" x1="0" y1="196" x2="0" y2="446">
+      <stop offset="0" stop-color="#6E2205" stop-opacity="0"/>
+      <stop offset="0.34" stop-color="#6E2205" stop-opacity=".40"/>
+      <stop offset="0.62" stop-color="#6E2205" stop-opacity=".40"/>
+      <stop offset="0.88" stop-color="#6E2205" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <path fill="url(#pkd-body)" d="M256 190C274.8 190.0 294.5 180.7 312.4 182.0C330.3 183.3 348.8 188.3 363.3 198.0C377.8 207.7 390.8 223.0 399.6 240.0C408.4 257.0 413.3 282.0 416.0 300.0C418.7 318.0 418.7 332.7 416.0 348.0C413.3 363.3 407.8 379.7 399.6 392.0C391.4 404.3 379.6 414.3 366.9 422.0C354.2 429.7 341.8 434.7 323.3 438.0C304.8 441.3 278.4 442.0 256.0 442.0C233.6 442.0 207.2 441.3 188.7 438.0C170.2 434.7 157.8 429.7 145.1 422.0C132.4 414.3 120.6 404.3 112.4 392.0C104.2 379.7 98.7 363.3 96.0 348.0C93.3 332.7 93.3 318.0 96.0 300.0C98.7 282.0 103.6 257.0 112.4 240.0C121.2 223.0 134.2 207.7 148.7 198.0C163.2 188.3 181.7 183.3 199.6 182.0C217.5 180.7 237.2 190.0 256.0 190.0Z"/>
+
+  <g fill="url(#pkd-crease)">
+    <path d="M270 200C284 240 316 286 316 330C316 386 284 424 256 442C286 428 298 386 298 330C298 286 286 240 270 200Z"/>
+    <path d="M282 202C300 244 376 288 376 330C376 384 300 428 256 442C310 430 360 384 360 330C360 288 310 244 282 202Z"/>
+    <path d="M242 200C228 240 196 286 196 330C196 386 228 424 256 442C226 428 214 386 214 330C214 286 226 240 242 200Z"/>
+    <path d="M230 202C212 244 136 288 136 330C136 384 212 428 256 442C202 430 152 384 152 330C152 288 202 244 230 202Z"/>
+  </g>
+
+  <ellipse cx="256" cy="203" rx="36" ry="9" fill="#6E2205" fill-opacity=".16"/>
+  <path fill="url(#pkd-stem)" d="M226 202C224 188 229 176 237 165C244 155 248 142 250 128L253 116L280 126C280 140 277 154 274 166C271 178 276 192 285 200C267 212 242 212 226 202Z"/>
+  <path fill="url(#pkd-leaf)" d="M280 166C304 138 344 122 394 128L376 150L392 168C356 178 318 180 292 178C287 174 283 170 280 166Z"/>
+  <path fill="#2F4A27" fill-opacity=".45" d="M292 170C318 158 346 146 376 136L378 141C350 151 322 163 296 175Z"/>
+  <ellipse cx="256" cy="439" rx="10" ry="3.5" fill="#6E2205" fill-opacity=".4"/>
+</svg>

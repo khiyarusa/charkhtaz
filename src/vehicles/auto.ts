@@ -9,6 +9,8 @@ export interface AutoOptions {
   wheelRadiusM: number;
   /** Rotational inertia per driven wheel, kg·m². */
   wheelInertia: number;
+  /** Published/estimated top speed of the car, used to bound short-shifts. */
+  topSpeedKph?: number;
   /** Engine + converter + wheel sub-steps per call (default 8). */
   substeps?: number;
 }
@@ -32,13 +34,18 @@ export class AutoDrivetrain {
   readonly spec: AutoSpec;
   private readonly wheelRadiusM: number;
   private readonly wheelInertia: number;
+  private readonly topSpeedKph: number;
   private readonly substeps: number;
   /** Pump torque coefficient, Nm per (rad/s)². */
   private readonly pumpC: number;
   private shiftCooldownS = 0;
+  /** Time since the last completed ratio change, seconds. */
+  private timeInGearS = 0;
   private tractionForceN = 0;
   /** Mean driven-wheel speed from the last step (rad/s), for shift prediction. */
   private meanWheelOmega = 0;
+  /** Last measured driven-wheel slip ratio (0 = rolling, 1 = fully spinning). */
+  private wheelSlip = 0;
 
   constructor(
     engineSpec: EngineSpec,
@@ -53,6 +60,7 @@ export class AutoDrivetrain {
     this.spec = autoSpec;
     this.wheelRadiusM = options.wheelRadiusM;
     this.wheelInertia = options.wheelInertia;
+    this.topSpeedKph = options.topSpeedKph ?? 200;
     this.substeps = Math.max(1, Math.floor(options.substeps ?? 8));
 
     const peakNm = engineSpec.torqueCurve.reduce((m, p) => Math.max(m, p.nm), 0);
@@ -183,9 +191,14 @@ export class AutoDrivetrain {
       }
       this.tractionForceN = traction;
       this.meanWheelOmega = meanOmega;
+
+      const wheelSpeed = Math.abs(meanOmega) * this.wheelRadiusM;
+      const groundSpeed = Math.abs(vehicleSpeedMs);
+      this.wheelSlip = Math.max(0, (wheelSpeed - groundSpeed) / Math.max(1.5, groundSpeed));
     }
 
     this.updateShiftSchedule(throttle, vehicleSpeedMs);
+    this.timeInGearS += dt;
 
     return {
       wheelTorqueNm: wheelTorque,
@@ -199,47 +212,107 @@ export class AutoDrivetrain {
     };
   }
 
-  /** Throttle-aware ratio schedule with kickdown; no scripted speed gates. */
+  /**
+   * Throttle-aware ratio schedule with kickdown and wheelspin escape.
+   *
+   * The schedule reads the real gearbox input speed (driven-wheel omega × the
+   * signed total ratio), not the car's road speed. The distinction matters when
+   * the driven wheels spin: the engine is at the limiter and the gearbox input
+   * is already fast while the car is barely moving, so a road-speed schedule
+   * holds first gear far too long. Converter slip, wheel slip and the engine
+   * limiter are all considered, and every shift is checked against the engine
+   * speed it would produce in the target gear.
+   */
   private updateShiftSchedule(throttle: number, vehicleSpeedMs: number): void {
     const gear = this.gearbox.currentGear;
     if (gear <= 0 || this.gearbox.isShifting || this.shiftCooldownS > 0) return;
 
-    // Shift decisions use the gearbox input (turbine) speed, not engine rpm:
-    // a slipping converter can pin the engine at redline while the car is
-    // barely moving, which otherwise leaves the box stuck in a tall gear.
-    const turbineRpm =
-      (Math.abs(vehicleSpeedMs) / this.wheelRadiusM) *
-      Math.abs(this.gearbox.ratio()) *
-      (60 / (2 * Math.PI));
-    const rpm = turbineRpm;
+    const rps = 60 / (2 * Math.PI);
+    const ratio = Math.abs(this.gearbox.ratio());
+    if (ratio === 0) return;
+
+    const wheelRpm = Math.abs(this.meanWheelOmega) * ratio * rps;
+    const roadRpm = (Math.abs(vehicleSpeedMs) / this.wheelRadiusM) * ratio * rps;
+    // The driven wheels are the gearbox's real input; the road speed is only a
+    // floor for the case where the tyre model is still catching up.
+    const turbineRpm = Math.max(wheelRpm, roadRpm * 0.96);
+    const engineRpm = this.engine.currentRpm;
+    const converterSlipRpm = Math.max(0, engineRpm - turbineRpm);
+    const maxRpm = this.engine.spec.maxRpm;
     const maxGear = this.gearbox.spec.gears.length;
-    const wheelOmega = this.meanWheelOmega;
+    const roadSpeedKph = Math.abs(vehicleSpeedMs) * 3.6;
 
     const upThreshold = this.spec.upshiftRpm - (1 - throttle) * 900;
-    if (rpm > upThreshold && gear < maxGear) {
-      this.request(gear + 1, wheelOmega);
+    const canUpshift = gear < maxGear && this.timeInGearS > 0.55;
+    const predictedUpRpm = canUpshift
+      ? this.gearbox.predictedEngineRpm(gear + 1, this.meanWheelOmega)
+      : Infinity;
+
+    // 1. Normal schedule: the input shaft has reached its shift point and the
+    //    next gear will not drop the engine below its usable band.
+    if (canUpshift && turbineRpm > upThreshold && predictedUpRpm > 1100) {
+      this.request(gear + 1);
       return;
     }
 
-    if (throttle > this.spec.kickdownThrottle && rpm < this.spec.kickdownRpm && gear > 1) {
-      this.request(gear - 1, wheelOmega);
+    // 2. Wheelspin escape: the engine is screaming while the car is slow. A
+    //    short-shift cuts torque multiplication at the wheel and lets the tyre
+    //    hook up again.
+    if (
+      canUpshift &&
+      this.wheelSlip > 0.3 &&
+      engineRpm > this.spec.upshiftRpm * 0.84 &&
+      roadSpeedKph < this.carTopSpeedKph() * 0.7
+    ) {
+      this.request(gear + 1);
       return;
     }
 
-    if (rpm < this.spec.downshiftRpm && gear > 1) {
-      this.request(gear - 1, wheelOmega);
+    // 3. Limiter protection with a slipping converter (deep mud, steep climb).
+    if (
+      canUpshift &&
+      engineRpm > maxRpm * 0.97 &&
+      converterSlipRpm > 500 &&
+      predictedUpRpm > 900
+    ) {
+      this.request(gear + 1);
+      return;
+    }
+
+    const predictedDownRpm = this.gearbox.predictedEngineRpm(gear - 1, this.meanWheelOmega);
+    const downIsSafe = predictedDownRpm < maxRpm * 0.92;
+
+    // 4. Kickdown: a firm pedal at low input speed drops one ratio.
+    if (
+      throttle > this.spec.kickdownThrottle &&
+      turbineRpm < this.spec.kickdownRpm &&
+      gear > 1 &&
+      downIsSafe
+    ) {
+      this.request(gear - 1);
+      return;
+    }
+
+    // 5. Coast / climb-downshift.
+    if (gear > 1 && turbineRpm < this.spec.downshiftRpm && downIsSafe && this.wheelSlip < 0.35) {
+      this.request(gear - 1);
     }
   }
 
-  private request(target: number, wheelOmega: number): void {
+  private carTopSpeedKph(): number {
+    return this.topSpeedKph;
+  }
+
+  private request(target: number): void {
     const result = this.gearbox.requestShift(
       target,
       1,
       this.engine.spec.maxRpm,
-      wheelOmega,
+      this.meanWheelOmega,
     );
     if (result.ok) {
       this.shiftCooldownS = Math.max(0.35, this.spec.shiftTimeS * 1.6);
+      this.timeInGearS = 0;
     }
   }
 
@@ -247,5 +320,6 @@ export class AutoDrivetrain {
   selectRange(range: -1 | 0 | 1): void {
     this.gearbox.forceGear(range === 1 ? 1 : range);
     this.shiftCooldownS = 0.5;
+    this.timeInGearS = 0;
   }
 }

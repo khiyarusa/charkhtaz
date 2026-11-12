@@ -7,6 +7,8 @@ The full V1 product specification is `docs/SPEC-V1.md`.
 
 - Product: چرخ‌تاز / CHARKHTAZ — Persian-first 2D side-view physics racing & obstacle-trial game.
 - Canonical repository: https://github.com/khiyarusa/charkhtaz (default branch `main`).
+- Brand: the official mark is the **pumpkin emblem** in `public/brand/`. The earlier
+  wheel-only mark is retired; never ship two competing identities.
 - The old **FARMAN** project (`khiyarusa/farman`) is a separate, retired project. **Never modify, reference, or reuse it.**
 
 ## Non-negotiables
@@ -17,8 +19,11 @@ The full V1 product specification is `docs/SPEC-V1.md`.
 4. **Offline-first.** No runtime CDN for engine, physics, fonts, assets or audio.
 5. **Real vehicles.** Real model names plus researched year/trim specs with sources recorded in `docs/VEHICLE_DATA_SOURCES.md`. Estimates must be marked as estimates.
 6. **No secrets in the repo.** Never commit tokens, keystores, passwords or `.env` files. Never print tokens in logs, docs or screenshots.
-7. **Honest documentation.** Never mark planned work as implemented. Every claim needs evidence: a test, a measurement, or a committed screenshot.
+7. **Honest documentation.** Never mark planned work as implemented. Every claim needs evidence: a test, a measurement, or a committed screenshot. `docs/REQUIREMENT-CLOSURE.md` is the matrix; `PARTIAL` and `BLOCKED` are allowed, an invented `PASS` is not.
 8. **Git safety.** No force-push, no history rewrites, no bypassing branch protection. Focused conventional commits, push regular milestones.
+9. **Model-specific art.** Every car has its own silhouette and equipment block. Never reuse one `sedan/suv/sport` template for a named model, and never stretch a sprite to hide missing detail.
+10. **Human copy.** Persian strings must read as written by a native editor, not generated: no filler superlatives, no repeated templates, one consistent automotive vocabulary (`docs/PERSIAN_COPY_GUIDE.md`).
+11. **Visual QA before merge.** A visual change is accepted only with a real screenshot at 1280×720 and at a phone landscape viewport, inspected for clipping, alignment and ground contact.
 
 ## Conventions
 
@@ -36,12 +41,12 @@ The full V1 product specification is `docs/SPEC-V1.md`.
 | --- | --- |
 | `src/core/` | lifecycle, game state, events, configuration, timing |
 | `src/physics/` | Planck world, fixed step, contacts, collision filters |
-| `src/vehicles/` | profiles, engine, clutch, transmission, tires, suspension, brakes, damage |
+| `src/vehicles/` | profiles, engine, clutch, transmission, tires, suspension, brakes, damage, upgrades and compatibility |
 | `src/controls/` | three-slider input, multi-touch, gear selector, control settings |
 | `src/tracks/` | track data, surfaces, checkpoints, camera bounds |
 | `src/obstacles/` | physical obstacle classes |
-| `src/racing/` | race state, positions, scoring, AI, ghost replay |
-| `src/career/` | progression, events, unlocks |
+| `src/racing/` | race state, positions, scoring, AI controller, ghost replay |
+| `src/career/` | progression, events, unlocks, medals, trial scoring, economy, achievements |
 | `src/ui/` | Persian RTL screens, HUD, design system |
 | `src/audio/` | engine/tire/effect buses |
 | `src/assets/` | loading manifests, validation |
@@ -49,3 +54,14 @@ The full V1 product specification is `docs/SPEC-V1.md`.
 
 Only one agent edits a shared module (physics core, project config, CI) at a
 time; the lead integrates and reviews every merge.
+
+## Quality gates
+
+- `npm run build` (strict typecheck + bundle) and `npm test` must both pass. The
+  suite includes route completion and roster/power validation, so a data edit that
+  breaks a track or a published spec fails the build.
+- Physics changes need a deterministic before/after measurement (a probe or a
+  test), never "feels better".
+- UI changes need a fresh screenshot in `docs/visual-qa/<version>/screenshots/`.
+- No placeholders: a silent audio path, a dead button, a fake stat or an
+  unimplemented menu is a defect, not a stub to ship.

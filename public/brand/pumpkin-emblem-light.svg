@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="نشان چرخ‌تاز">
+  <defs>
+    <clipPath id="badgeClipLight">
+      <rect x="0" y="0" width="512" height="512" rx="112"/>
+    </clipPath>
+    <linearGradient id="rimLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7a63e"/>
+      <stop offset="0.45" stop-color="#e5831f"/>
+      <stop offset="1" stop-color="#c2630f"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#badgeClipLight)">
+    <rect x="0" y="0" width="512" height="512" fill="#f4efe4"/>
+    <rect x="26" y="26" width="460" height="460" rx="90" fill="none" stroke="#1a1e24" stroke-opacity="0.14" stroke-width="3"/>
+
+    <path fill="url(#rimLight)" stroke="#1a1e24" stroke-width="9" stroke-linejoin="round" d="
+      M100 266
+      C100 212 122 180 152 172
+      C170 167 184 176 196 178
+      C210 180 218 160 230 155
+      C242 150 248 164 256 164
+      C264 164 270 150 282 155
+      C294 160 302 180 316 178
+      C328 176 342 167 360 172
+      C390 180 412 212 412 266
+      C412 320 390 352 360 360
+      C342 365 328 356 316 354
+      C302 352 294 372 282 377
+      C270 382 264 368 256 368
+      C248 368 242 382 230 377
+      C218 372 210 352 196 354
+      C184 356 170 365 152 360
+      C122 352 100 320 100 266 Z"/>
+
+    <g fill="none" stroke="#a94f0c" stroke-opacity="0.85" stroke-linecap="round" stroke-width="8">
+      <path d="M232 168 C226 208 226 328 232 362"/>
+      <path d="M280 168 C286 208 286 328 280 362"/>
+      <path d="M192 186 C180 222 180 312 192 348"/>
+      <path d="M320 186 C332 222 332 312 320 348"/>
+    </g>
+
+    <path fill="#3f6b32" d="M243 168 C241 142 247 122 261 110 C272 122 276 144 272 168 Z"/>
+    <path fill="#5f9247" d="M261 112 C279 102 299 104 313 116 C299 130 281 133 263 126 Z"/>
+
+    <g>
+      <rect x="112" y="424" width="288" height="12" rx="6" fill="#1a1e24" opacity="0.16"/>
+      <rect x="128" y="424" width="56" height="12" rx="6" fill="#1a1e24"/>
+      <rect x="228" y="424" width="56" height="12" rx="6" fill="#1a1e24"/>
+      <rect x="328" y="424" width="56" height="12" rx="6" fill="#1a1e24"/>
+    </g>
+  </g>
+</svg>

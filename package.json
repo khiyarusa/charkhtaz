@@ -1,7 +1,7 @@
 {
   "name": "charkhtaz",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CHARKHTAZ (چرخ‌تاز) — Persian-first 2D side-view physics racing & obstacle-trial game",
   "type": "module",
   "scripts": {

@@ -88,6 +88,8 @@ export interface SurfaceSpec {
  * closes and the engine is rigidly tied to the gearbox input.
  */
 export interface AutoSpec {
+  /** Converter (torque converter + gears) or a belt CVT with no fixed ratios. */
+  kind?: 'converter' | 'cvt';
   /** Engine rpm at which a full-throttle upshift is commanded. */
   upshiftRpm: number;
   /** Engine rpm below which a downshift is commanded. */

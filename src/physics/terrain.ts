@@ -63,6 +63,8 @@ export class Terrain {
     body.createFixture(shape, {
       friction: surface.friction,
       restitution: 0,
+      filterCategoryBits: 0x0001,
+      filterMaskBits: 0xffff,
       userData: { type: 'ground', surface } satisfies GroundFixtureData,
     });
     this.bodies.push(body);
@@ -79,6 +81,8 @@ export class Terrain {
     const options = {
       friction: surface.friction,
       restitution: 0.02,
+      filterCategoryBits: 0x0008,
+      filterMaskBits: 0xffff,
       userData: { type: 'obstacle', kind: o.kind, surface } satisfies ObstacleFixtureData,
     };
 
@@ -103,9 +107,30 @@ export class Terrain {
         body.createFixture(new Box(o.halfWidth * 0.62, o.halfHeight * 0.42), options);
         break;
       }
-      default:
+      case 'plank-bridge':
         body.createFixture(new Box(o.halfWidth, o.halfHeight), options);
         break;
+      default: {
+        // Blocks and barricades get chamfered top edges so a tyre can ride up
+        // instead of hitting a vertical wall. Without this the car can never
+        // pass a kerb taller than a few centimetres, because the wheel is
+        // horizontally tied to the chassis by the wheel joint.
+        const w = o.halfWidth;
+        const h = o.halfHeight;
+        const chamfer = Math.min(h * 0.55, w * 0.7);
+        body.createFixture(
+          new Polygon([
+            Vec2(-w, -h),
+            Vec2(w, -h),
+            Vec2(w, h - chamfer),
+            Vec2(w - chamfer, h),
+            Vec2(-w + chamfer, h),
+            Vec2(-w, h - chamfer),
+          ]),
+          options,
+        );
+        break;
+      }
     }
     this.bodies.push(body);
   }

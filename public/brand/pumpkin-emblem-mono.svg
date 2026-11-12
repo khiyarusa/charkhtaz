@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="چرخ‌تاز">
+  <!-- Monochrome mark: no badge, one colour, safe on any background. -->
+  <g fill="currentColor">
+    <path d="
+      M100 266
+      C100 212 122 180 152 172
+      C170 167 184 176 196 178
+      C210 180 218 160 230 155
+      C242 150 248 164 256 164
+      C264 164 270 150 282 155
+      C294 160 302 180 316 178
+      C328 176 342 167 360 172
+      C390 180 412 212 412 266
+      C412 320 390 352 360 360
+      C342 365 328 356 316 354
+      C302 352 294 372 282 377
+      C270 382 264 368 256 368
+      C248 368 242 382 230 377
+      C218 372 210 352 196 354
+      C184 356 170 365 152 360
+      C122 352 100 320 100 266 Z"/>
+    <path d="M243 168 C241 142 247 122 261 110 C272 122 276 144 272 168 Z"/>
+    <path d="M261 112 C279 102 299 104 313 116 C299 130 281 133 263 126 Z"/>
+    <rect x="112" y="424" width="56" height="12" rx="6"/>
+    <rect x="196" y="424" width="56" height="12" rx="6"/>
+    <rect x="280" y="424" width="56" height="12" rx="6"/>
+    <rect x="364" y="424" width="36" height="12" rx="6"/>
+  </g>
+  <!-- Grooves cut out of the silhouette. -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0" stroke-width="8">
+    <path d="M232 168 C226 208 226 328 232 362"/>
+    <path d="M280 168 C286 208 286 328 280 362"/>
+    <path d="M192 186 C180 222 180 312 192 348"/>
+    <path d="M320 186 C332 222 332 312 320 348"/>
+  </g>
+</svg>

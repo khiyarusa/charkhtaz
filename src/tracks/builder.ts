@@ -112,13 +112,17 @@ export class TrackBuilder {
     return this;
   }
 
-  /** A jump gap: ground stops, then resumes at the same height. */
+  /**
+   * Authored "jump gap".
+   *
+   * It is built as a shallow ditch rather than a bottomless hole. A side-view
+   * car with no steering cannot be relied on to clear an arbitrary hole, and a
+   * hole turns the route into a respawn loop; a ditch still throws the car light
+   * at speed, and the geometry is identical for collision and art.
+   */
   gap(widthM: number, surface?: SurfaceId): this {
-    this.x += widthM;
-    const next = this.currentSurface(surface);
-    this.current = { surface: next, points: [{ x: this.x, y: this.y }] };
-    this.runs.push(this.current);
-    return this;
+    const depth = Math.min(0.85, 0.35 + widthM * 0.06);
+    return this.profile(widthM, (t) => -Math.sin(Math.PI * t) * depth, surface);
   }
 
   /** Sand / mud / gravel patch (surface only, same geometry). */
@@ -126,38 +130,43 @@ export class TrackBuilder {
     return this.flat(lengthM, surface);
   }
 
-  /** A boulder sitting on the ground. */
+  /** A boulder sitting on the ground. Height stays below the smallest wheel. */
   rock(sizeM = 0.8, x = this.x + 2): this {
+    const heightM = Math.min(0.24, sizeM * 0.3 * 2);
     this.obstacles.push({
       kind: 'rock',
       x,
-      y: this.groundYApprox(x) + sizeM * 0.62,
+      // Seated on the ground: a boulder floating above the road presents its
+      // downward-sloping underside to the tyre and jams the car.
+      y: this.groundYApprox(x) + heightM / 2,
       halfWidth: sizeM * 0.75,
-      halfHeight: sizeM * 0.34,
+      halfHeight: heightM / 2,
     });
     return this;
   }
 
   /** A fallen log lying across the route. */
   log(radiusM = 0.28, x = this.x + 2): this {
+    const radius = Math.min(radiusM, 0.22);
     this.obstacles.push({
       kind: 'log',
       x,
-      y: this.groundYApprox(x) + radiusM * 0.9,
-      halfWidth: radiusM,
-      halfHeight: radiusM,
+      y: this.groundYApprox(x) + radius * 0.9,
+      halfWidth: radius,
+      halfHeight: radius,
     });
     return this;
   }
 
   /** Stack of tyres — a low, soft-ish obstacle. */
   tires(sizeM = 0.55, x = this.x + 2): this {
+    const height = Math.min(sizeM, 0.24);
     this.obstacles.push({
       kind: 'tire-stack',
       x,
-      y: this.groundYApprox(x) + sizeM * 0.5,
+      y: this.groundYApprox(x) + height / 2,
       halfWidth: sizeM * 0.7,
-      halfHeight: sizeM * 0.22,
+      halfHeight: height / 2,
     });
     return this;
   }
@@ -176,12 +185,13 @@ export class TrackBuilder {
 
   /** Concrete barrier / block. */
   block(widthM = 0.5, heightM = 0.8, x = this.x + 2): this {
+    const height = Math.min(heightM, 0.22);
     this.obstacles.push({
       kind: 'concrete-block',
       x,
-      y: this.groundYApprox(x) + heightM / 2,
+      y: this.groundYApprox(x) + height / 2,
       halfWidth: widthM / 2,
-      halfHeight: heightM / 2,
+      halfHeight: height / 2,
     });
     return this;
   }

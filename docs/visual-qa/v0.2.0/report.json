@@ -1,0 +1,75 @@
+{
+  "commit": "2a03134",
+  "url": "http://localhost:5173/",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "deviceScaleFactor": 1,
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+  "carNames": [
+    "سایپا شاهین",
+    "تویوتا لندکروزر پرادو",
+    "بی‌ام‌و ۳۲۰i",
+    "پژو ۲۰۶",
+    "ایران‌خودرو تارا",
+    "رنو تندر ۹۰",
+    "تویوتا کرولا",
+    "مزدا ام‌ایکس-۵"
+  ],
+  "shots": [
+    "01-home",
+    "02-profile",
+    "03-career",
+    "04-garage",
+    "05-car-01",
+    "05-car-02",
+    "05-car-03",
+    "05-car-04",
+    "05-car-05",
+    "05-car-06",
+    "05-car-07",
+    "05-car-08",
+    "06-upgrades",
+    "07-upgrade-after",
+    "08-upgrade-tires",
+    "08-upgrade-suspension",
+    "08-upgrade-differential",
+    "08-upgrade-clutch",
+    "09-settings",
+    "10-track-select",
+    "11-hud-manual",
+    "12-hud-three-touch",
+    "13-hud-driving",
+    "14-pause",
+    "15-hud-automatic",
+    "16-race-ai",
+    "17-result",
+    "18-hud-time-trial"
+  ],
+  "touchValues": {
+    "throttle": 80,
+    "brake": 45,
+    "clutch": 70
+  },
+  "releaseValues": {
+    "throttle": 0,
+    "brake": 0,
+    "clutch": 0
+  },
+  "driving": {
+    "speed": "۱۸",
+    "gear": "۱",
+    "rpm": "۶۰۰۰"
+  },
+  "clutchVisible": false,
+  "standings": 3,
+  "pacing": {
+    "frames": 241,
+    "medianMs": 16.7,
+    "p95Ms": 16.8,
+    "maxMs": 17.6,
+    "fpsMedian": 59.9
+  },
+  "errors": []
+}

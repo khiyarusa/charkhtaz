@@ -1,3 +1,17 @@
+# CHARKHTAZ — PRODUCT SPECIFICATION
+
+> **v0.2.0 delta (2026-11-12).** This revision closes the missing gameplay and
+> presentation systems. Implemented and evidenced: eight model-specific cars,
+> the pumpkin brand family, career with ten events, AI opponents, ghost replay,
+> obstacle-trial medals, a functional eight-category upgrade/tuning system with
+> compatibility and refunds, persistent damage and repair, procedural audio,
+> the wheelspin-aware automatic schedule, a stable landing suspension, render
+> interpolation, expanded routes/biomes and a Persian copy pass.
+> Requirement-by-requirement status, including the `PARTIAL` and `BLOCKED`
+> rows, is in [`REQUIREMENT-CLOSURE.md`](REQUIREMENT-CLOSURE.md). The original
+> V1 brief below is preserved as the scope of record.
+
+---
 # CHARKHTAZ — AUTONOMOUS MASTER BUILD, VISUAL QA & ANDROID RELEASE PROMPT
 
 **Product:** چرخ‌تاز / CHARKHTAZ  

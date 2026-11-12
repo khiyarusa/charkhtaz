@@ -4,13 +4,37 @@ Retrieved **2026-11-12**. Every value below is either cited or explicitly marked
 as an engineering estimate. Estimates are not factory data and must not be
 presented as such.
 
+## Roster index (v0.2, eight cars)
+
+| # | Car | Year / trim | Layout, gearbox | Confidence | Detail |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Saipa Shahin 1.5T | 2022 · GLX | FWD, 5-speed manual | high on published figures, estimates labelled | this file |
+| 2 | Toyota Land Cruiser Prado 150 4.0 V6 | 2021 · TX-L | AWD, 6-speed automatic | mixed | this file |
+| 3 | BMW 320i G20 | 2021 · Sport Line | RWD, 8-speed automatic | high on published figures | this file |
+| 4 | Peugeot 206 1.4 | 2008 · Type 2 | FWD, 5-speed manual | high | [`vehicle-sources-extra.md`](vehicle-sources-extra.md) |
+| 5 | IKCO Tara 1.6 | 2023 · automatic | FWD, 6-speed automatic | mixed (two conflicting sources recorded) | same |
+| 6 | Renault Tondar 90 (L90) | 2014 · E2 | FWD, 5-speed manual | high | same |
+| 7 | Toyota Corolla E210 1.6 | 2020 · XLI, CVT | FWD, CVT | mixed | same |
+| 8 | Mazda MX-5 ND 2.0 | 2019 · Skyactiv-G | RWD, 6-speed manual | high | same |
+
+**v0.2 data change:** the torque curves of the Shahin and the 320i were trimmed at
+the top end (Shahin 5 500 rpm: 148 → 142 N·m; BMW 6 000 rpm: 215 → 219 N·m) so the
+peak power computed from the curve matches the published figure. `roster.test.ts`
+now asserts published power ±1 hp and peak torque ±2 N·m for every car, so a
+future data edit cannot silently disagree with the garage.
+
 ## Selection
 
-| Car | Why it is in V1 | Layout / gearbox |
+| Car | Why it is in the roster | Layout / gearbox |
 | --- | --- | --- |
 | Saipa Shahin 1.5 turbo (2022, Iran) | Iranian-market manual FWD car — the teaching car | FWD, 5-speed manual |
 | Toyota Land Cruiser Prado 150 4.0 V6 (2021) | Heavy automatic 4WD — weight, grip and momentum | AWD, 6-speed automatic |
 | BMW 320i G20 (2021) | Rear-drive sports sedan — traction-limited launch | RWD, 8-speed automatic |
+| Peugeot 206 1.4 (2008, Iran) | Light Iranian-market hatchback — momentum discipline | FWD, 5-speed manual |
+| IKCO Tara 1.6 (2023, Iran) | Iranian automatic sedan — torque-converter driving | FWD, 6-speed automatic |
+| Renault Tondar 90 (2014, Iran) | Common Iranian sedan, different gearing and mass | FWD, 5-speed manual |
+| Toyota Corolla E210 1.6 (2020) | International FWD automatic with a CVT | FWD, CVT |
+| Mazda MX-5 ND 2.0 (2019) | Light rear-drive roadster — the handling extreme | RWD, 6-speed manual |
 
 ## Saipa Shahin
 

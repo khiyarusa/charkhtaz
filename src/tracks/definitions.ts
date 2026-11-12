@@ -52,12 +52,12 @@ const lutDunes = (): TrackDefinition => {
   b.flat(30, 'gravel');
   b.rock(0.9, b.cursorX + 14);
   b.flat(20);
-  b.whoops(3, 30, 0.65, 'sand');
+  b.whoops(2, 36, 0.3, 'sand');
   b.flat(24);
   b.ramp(18, 2.0, 'gravel');
   b.gap(6);
   b.flat(40, 'sand');
-  b.hill(50, 6, 'sand');
+  b.hill(50, 4.2, 'sand');
   b.flat(30);
   b.log(0.2, b.cursorX + 10);
   b.flat(60);

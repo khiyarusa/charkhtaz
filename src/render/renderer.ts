@@ -2,6 +2,8 @@ import type { TrackDefinition, Vec2Like } from '../tracks/types';
 import { BIOME_PALETTES, SURFACE_LOOK, type BiomePalette } from './palettes';
 import { drawCarBody, drawCarShadow, drawWheel } from './vehicle-art';
 import type { Vehicle } from '../physics/vehicle';
+import type { ResolvedCar } from '../vehicles/profiles';
+import type { GhostPose } from '../racing/ghost';
 import { groundPointAt } from '../tracks/builder';
 import { hash01 } from '../core/math';
 import { faNum } from '../core/format';
@@ -28,11 +30,15 @@ export interface Particle {
 
 export interface RenderState {
   vehicle: Vehicle;
+  opponents?: readonly Vehicle[];
   camera: Camera;
   particles: readonly Particle[];
   elapsedS: number;
   paused: boolean;
   showDebug: boolean;
+  /** 0..1 between the previous and current physics transforms. */
+  alpha: number;
+  ghost?: { pose: GhostPose; car: ResolvedCar } | null;
 }
 
 const paletteCache = new Map<string, CanvasGradient>();
@@ -92,6 +98,8 @@ export class Renderer {
     this.drawGates(cam, state.elapsedS);
     this.drawDecorations(cam);
     this.drawObstacles(cam);
+    for (const opponent of state.opponents ?? []) this.drawVehicleAt(opponent, state, cam);
+    if (state.ghost) this.drawGhost(state.ghost, cam);
     this.drawVehicle(state);
     this.drawParticles(state, cam);
     this.drawVignette(palette);
@@ -106,14 +114,15 @@ export class Renderer {
     if (!grad) {
       grad = this.ctx.createLinearGradient(0, 0, 0, this.height);
       grad.addColorStop(0, palette.skyTop);
-      grad.addColorStop(0.52, palette.skyMid);
-      grad.addColorStop(1, palette.skyBottom);
+      grad.addColorStop(0.42, palette.skyMid);
+      grad.addColorStop(0.72, palette.skyBottom);
+      grad.addColorStop(1, palette.haze);
       paletteCache.set(key, grad);
     }
     this.ctx.fillStyle = grad;
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    // Sun with atmospheric glow.
+    // Sun with a wide atmospheric glow and a tighter core.
     const sunX = this.width * 0.74;
     const sunY = this.height * 0.2;
     const glow = this.ctx.createRadialGradient(
@@ -122,46 +131,97 @@ export class Renderer {
       this.height * 0.02,
       sunX,
       sunY,
-      this.height * 0.42,
+      this.height * 0.5,
     );
     glow.addColorStop(0, palette.sunGlow);
+    glow.addColorStop(0.45, 'rgba(0,0,0,0)');
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     this.ctx.fillStyle = glow;
     this.ctx.fillRect(0, 0, this.width, this.height);
 
     this.ctx.beginPath();
-    this.ctx.arc(sunX, sunY, this.height * 0.045, 0, Math.PI * 2);
+    this.ctx.arc(sunX, sunY, this.height * 0.043, 0, Math.PI * 2);
     this.ctx.fillStyle = palette.sun;
     this.ctx.fill();
+
+    // Thin cloud bands, deterministic per biome so the sky does not flicker.
+    if (this.track.biome === 'mountain' || this.track.biome === 'forest' || this.track.biome === 'urban') {
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.1;
+      this.ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 5; i++) {
+        const cx = ((i * 317) % 100) / 100 * this.width;
+        const cy = this.height * (0.09 + ((i * 41) % 17) / 100);
+        const w = this.width * (0.14 + ((i * 13) % 9) / 60);
+        this.ctx.beginPath();
+        this.ctx.ellipse(cx, cy, w, this.height * 0.018, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+      this.ctx.restore();
+    }
   }
 
   // ----------------------------------------------------------- background ----
   private drawBackground(palette: BiomePalette, cam: Camera, time: number): void {
     const biome = this.track.biome;
     if (biome === 'urban') {
-      this.drawSkyline(palette, cam, 0.1, 0.36, 0.24, 11, 0.55);
-      this.drawSkyline(palette, cam, 0.24, 0.46, 0.2, 7, 0.85);
+      this.drawSkyline(palette, cam, 0.08, 0.4, 0.2, 11, 0.4);
+      this.drawSkyline(palette, cam, 0.2, 0.52, 0.24, 7, 0.58);
+      this.drawSkyline(palette, cam, 0.4, 0.62, 0.17, 3, 0.72);
+      this.drawStreetLamps(cam, time);
     } else if (biome === 'forest') {
-      this.drawTreeline(palette, cam, 0.12, 0.55, 0.6, '#33443a', 1.6);
-      this.drawTreeline(palette, cam, 0.32, 0.66, 0.38, '#26382f', 1.2);
+      this.drawTreeline(palette, cam, 0.08, 0.48, 0.5, '#2b3a33', 2.2, 0.55);
+      this.drawTreeline(palette, cam, 0.22, 0.58, 0.7, '#22312a', 1.5, 0.8);
+      this.drawTreeline(palette, cam, 0.44, 0.68, 1, '#18241f', 1.1, 1);
     } else {
       const sharp = biome === 'mountain';
-      this.drawRidge(palette.farRidge, cam, 0.1, 0.5, sharp ? 85 : 130, sharp ? 68 : 34, 3, 0.85);
-      this.drawRidge(palette.midRidge, cam, 0.26, 0.62, sharp ? 70 : 115, sharp ? 52 : 26, 7, 1);
+      this.drawRidge(palette.farRidge, cam, 0.07, 0.46, sharp ? 95 : 140, sharp ? 96 : 40, 3, 0.9, sharp);
+      this.drawRidge(palette.midRidge, cam, 0.2, 0.58, sharp ? 74 : 118, sharp ? 64 : 30, 7, 1, sharp);
       if (biome === 'desert') {
         this.drawDunes(palette, cam);
       } else {
-        this.drawRidge(palette.nearRidge, cam, 0.48, 0.74, 55, 38, 13, 1.25);
+        this.drawRidge(palette.nearRidge, cam, 0.42, 0.7, 58, 42, 13, 1.2, false);
       }
     }
 
-    // Ground haze band that ties the parallax layers to the road.
-    const haze = this.ctx.createLinearGradient(0, this.height * 0.45, 0, this.height * 0.78);
+    // Haze band that ties the parallax layers to the road, with a soft fade at
+    // the top so no hard horizontal seam is visible mid-screen.
+    const haze = this.ctx.createLinearGradient(0, this.height * 0.42, 0, this.height * 0.84);
     haze.addColorStop(0, 'rgba(0,0,0,0)');
     haze.addColorStop(1, palette.haze);
+    this.ctx.save();
+    this.ctx.globalAlpha = 0.72;
     this.ctx.fillStyle = haze;
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    this.ctx.fillRect(0, this.height * 0.42, this.width, this.height * 0.42);
+    this.ctx.restore();
     void time;
+  }
+
+  private drawStreetLamps(cam: Camera, time: number): void {
+    const ctx = this.ctx;
+    const spacing = 190;
+    const offset = cam.x * cam.ppm * 0.4;
+    const start = Math.floor(offset / spacing) - 1;
+    for (let i = 0; i < Math.ceil(this.width / spacing) + 3; i++) {
+      const index = start + i;
+      const x = index * spacing - offset;
+      const baseY = this.height * 0.63;
+      ctx.strokeStyle = 'rgba(60, 64, 68, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, baseY);
+      ctx.lineTo(x, baseY - 54);
+      ctx.quadraticCurveTo(x, baseY - 64, x + 18, baseY - 64);
+      ctx.stroke();
+      const lit = 0.18 + 0.1 * Math.sin(time * 0.6 + index);
+      const g = ctx.createRadialGradient(x + 20, baseY - 62, 0, x + 20, baseY - 62, 16);
+      g.addColorStop(0, `rgba(255, 214, 150, ${lit})`);
+      g.addColorStop(1, 'rgba(255, 214, 150, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x + 20, baseY - 62, 16, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   private ridgeValue(worldX: number, seed: number, wavelength: number): number {
@@ -184,25 +244,60 @@ export class Renderer {
     amplitude: number,
     seed: number,
     detail: number,
+    snowy = false,
   ): void {
     const ctx = this.ctx;
     const baseY = this.height * baseRatio;
     const offset = cam.x * cam.ppm * parallax;
     ctx.beginPath();
     ctx.moveTo(0, this.height);
-    const step = 26;
+    const step = 22;
+    const peaks: { x: number; y: number }[] = [];
     for (let px = 0; px <= this.width + step; px += step) {
       const worldX = px + offset;
       const n =
         this.ridgeValue(worldX, seed, wavelength) * 0.68 +
         this.ridgeValue(worldX * 2.3, seed + 4, wavelength * 0.45) * 0.32 * detail;
       const y = baseY - n * amplitude;
+      peaks.push({ x: px, y });
       ctx.lineTo(px, y);
     }
     ctx.lineTo(this.width, this.height);
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();
+
+    // Snow caps and rock facets on the sharp mountain layers.
+    if (snowy) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(0, this.height);
+      for (const p of peaks) ctx.lineTo(p.x, p.y);
+      ctx.lineTo(this.width, this.height);
+      ctx.closePath();
+      ctx.clip();
+      for (let i = 0; i < peaks.length; i += 3) {
+        const p = peaks[i]!;
+        const next = peaks[Math.min(peaks.length - 1, i + 3)]!;
+        if (peaks[i - 1] && p.y > peaks[i - 1]!.y) continue;
+        const depth = amplitude * 0.22;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - 1);
+        ctx.lineTo(next.x, next.y - 1);
+        ctx.lineTo((p.x + next.x) / 2, p.y + depth);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(236, 240, 244, 0.35)';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Fade the base of the ridge into the haze.
+    const fade = ctx.createLinearGradient(0, baseY - amplitude * 0.15, 0, baseY + this.height * 0.12);
+    fade.addColorStop(0, 'rgba(0,0,0,0)');
+    fade.addColorStop(1, 'rgba(0,0,0,0.28)');
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, baseY - amplitude * 0.15, this.width, this.height * 0.24);
   }
 
   private drawDunes(palette: BiomePalette, cam: Camera): void {
@@ -241,27 +336,31 @@ export class Renderer {
 
   private drawTree(x: number, baseY: number, scale: number, color: string, variant: number): void {
     const ctx = this.ctx;
+    const h = 30 * scale;
+    ctx.fillStyle = '#20221f';
+    ctx.fillRect(x - 1.3 * scale, baseY - h * 0.62, 2.6 * scale, h * 0.62);
     ctx.fillStyle = color;
-    const h = 26 * scale;
     if (variant % 3 === 0) {
-      // Conifer.
-      ctx.beginPath();
-      ctx.moveTo(x, baseY - h);
-      ctx.lineTo(x + 7 * scale, baseY);
-      ctx.lineTo(x - 7 * scale, baseY);
-      ctx.closePath();
-      ctx.fill();
+      // Conifer: three stacked tiers.
+      for (let tier = 0; tier < 3; tier++) {
+        const tierY = baseY - h * (0.35 + tier * 0.22);
+        const half = (9 - tier * 2.2) * scale;
+        ctx.beginPath();
+        ctx.moveTo(x, tierY - h * 0.3);
+        ctx.lineTo(x + half, tierY);
+        ctx.lineTo(x - half, tierY);
+        ctx.closePath();
+        ctx.fill();
+      }
     } else {
-      ctx.fillRect(x - 1.2 * scale, baseY - h * 0.75, 2.4 * scale, h * 0.75);
-      ctx.beginPath();
-      ctx.arc(x, baseY - h * 0.78, 7 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(x - 5 * scale, baseY - h * 0.62, 5.4 * scale, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(x + 5 * scale, baseY - h * 0.64, 5 * scale, 0, Math.PI * 2);
-      ctx.fill();
+      const blobs = 4;
+      for (let i = 0; i < blobs; i++) {
+        const bx = x + (i - 1.5) * 4.2 * scale;
+        const by = baseY - h * (0.72 + (i % 2) * 0.12);
+        ctx.beginPath();
+        ctx.arc(bx, by, (7.5 - Math.abs(i - 1.5)) * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -273,19 +372,29 @@ export class Renderer {
     scale: number,
     color: string,
     spacingM: number,
+    alpha = 1,
   ): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalAlpha = alpha;
     const offset = cam.x * cam.ppm * parallax;
     const baseY = this.height * baseRatio;
-    const spacing = spacingM * 40 * scale;
+    const spacing = spacingM * 46 * scale;
     const start = Math.floor(offset / spacing) - 1;
     const count = Math.ceil(this.width / spacing) + 3;
     for (let i = 0; i < count; i++) {
       const index = start + i;
       const px = index * spacing - offset;
       const r = hash01(index * 131 + 17);
-      this.drawTree(px, baseY, 0.7 + r * 0.9, color, Math.floor(r * 7));
+      this.drawTree(px, baseY + r * 4, 0.7 + r * 0.9, color, Math.floor(r * 7));
     }
-    void palette;
+    // Mist at the foot of the treeline.
+    const mist = ctx.createLinearGradient(0, baseY - this.height * 0.03, 0, baseY + this.height * 0.06);
+    mist.addColorStop(0, 'rgba(0,0,0,0)');
+    mist.addColorStop(1, palette.haze);
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, baseY - this.height * 0.03, this.width, this.height * 0.09);
+    ctx.restore();
   }
 
   private drawSkyline(
@@ -313,12 +422,12 @@ export class Renderer {
       const x = index * unit - offset;
       ctx.fillStyle = palette.farRidge;
       ctx.fillRect(x, baseY - h, w, h);
-      // Windows.
-      ctx.fillStyle = 'rgba(255, 214, 140, 0.2)';
-      for (let wy = baseY - h + 8; wy < baseY - 10; wy += 14) {
-        for (let wx = x + 6; wx < x + w - 6; wx += 12) {
-          if (hash01(Math.round(wx * 3 + wy * 7)) > 0.62) {
-            ctx.fillRect(wx, wy, 3, 4);
+      // Windows: sparse, dim lit cells rather than a bright grid.
+      ctx.fillStyle = 'rgba(255, 214, 140, 0.12)';
+      for (let wy = baseY - h + 10; wy < baseY - 12; wy += 18) {
+        for (let wx = x + 7; wx < x + w - 7; wx += 15) {
+          if (hash01(Math.round(wx * 3 + wy * 7)) > 0.78) {
+            ctx.fillRect(wx, wy, 2.5, 3.5);
           }
         }
       }
@@ -333,41 +442,64 @@ export class Renderer {
     const rightM = cam.x + this.width / cam.ppm + 12;
 
     for (const run of this.track.runs) {
-      const points = run.points.filter((p) => p.x >= leftM && p.x <= rightM);
-      if (points.length < 2) {
-        if (run.points.length >= 2) {
-          const first = run.points[0]!;
-          const last = run.points[run.points.length - 1]!;
-          if (last.x < leftM || first.x > rightM) continue;
-        } else continue;
-      }
-      const visible = run.points.filter((p) => p.x >= leftM - 4 && p.x <= rightM + 4);
+      const visible = run.points.filter((p) => p.x >= leftM - 6 && p.x <= rightM + 6);
       if (visible.length < 2) continue;
       const look = SURFACE_LOOK[run.surface];
       const bottom = this.height + 40;
+      const first = visible[0]!;
+      const last = visible[visible.length - 1]!;
+
+      // Ambient occlusion above the ground seats the road in the scene.
+      const ao = ctx.createLinearGradient(0, this.sy(first.y, cam) - cam.ppm * 1.1, 0, this.sy(first.y, cam));
+      ao.addColorStop(0, 'rgba(0,0,0,0)');
+      ao.addColorStop(1, 'rgba(0,0,0,0.22)');
+      ctx.fillStyle = ao;
+      ctx.fillRect(0, this.sy(first.y, cam) - cam.ppm * 1.1, this.width, cam.ppm * 1.1);
 
       // Body of the ground with strata.
       ctx.beginPath();
-      const first = visible[0]!;
       ctx.moveTo(this.sx(first.x, cam), this.sy(first.y, cam));
       for (const p of visible) ctx.lineTo(this.sx(p.x, cam), this.sy(p.y, cam));
-      const last = visible[visible.length - 1]!;
       ctx.lineTo(this.sx(last.x, cam), bottom);
       ctx.lineTo(this.sx(first.x, cam), bottom);
       ctx.closePath();
       const grad = ctx.createLinearGradient(0, this.sy(first.y, cam), 0, bottom);
       grad.addColorStop(0, look.fill);
-      grad.addColorStop(0.55, look.deep);
-      grad.addColorStop(1, '#141414');
+      grad.addColorStop(0.28, look.deep);
+      grad.addColorStop(1, '#101010');
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Surface band.
+      // Parallel strata lines give the cut earth some depth.
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(this.sx(first.x, cam), this.sy(first.y, cam));
+      for (const p of visible) ctx.lineTo(this.sx(p.x, cam), this.sy(p.y, cam));
+      ctx.lineTo(this.sx(last.x, cam), bottom);
+      ctx.lineTo(this.sx(first.x, cam), bottom);
+      ctx.closePath();
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 5; i++) {
+        ctx.beginPath();
+        for (let k = 0; k < visible.length; k++) {
+          const p = visible[k]!;
+          const x = this.sx(p.x, cam);
+          const y = this.sy(p.y, cam) + cam.ppm * 0.32 * i + Math.sin(p.x * 0.7 + i) * 2;
+          if (k === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Crown: a thin, bright surface line so the tyre contact reads.
       ctx.beginPath();
       ctx.moveTo(this.sx(first.x, cam), this.sy(first.y, cam));
       for (const p of visible) ctx.lineTo(this.sx(p.x, cam), this.sy(p.y, cam));
       ctx.strokeStyle = look.top;
-      ctx.lineWidth = Math.max(3, cam.ppm * 0.09);
+      ctx.lineWidth = Math.max(2, cam.ppm * 0.055);
       ctx.lineJoin = 'round';
       ctx.stroke();
 
@@ -375,7 +507,7 @@ export class Renderer {
 
       // Surface grain: deterministic dashes, limited to the visible span.
       ctx.strokeStyle = look.grain;
-      ctx.globalAlpha = look.loose ? 0.5 : 0.25;
+      ctx.globalAlpha = look.loose ? 0.5 : 0.22;
       ctx.lineWidth = 1;
       const from = Math.max(0, Math.floor((first.x - 2) / 2));
       const to = Math.ceil((last.x + 2) / 2);
@@ -394,22 +526,22 @@ export class Renderer {
       }
       ctx.globalAlpha = 1;
 
-      // Highlight edge below the surface.
+      // Dark edge under the crown, which is what makes the road look solid.
       ctx.beginPath();
       for (let i = 0; i < visible.length; i++) {
         const p = visible[i]!;
         const px = this.sx(p.x, cam);
-        const py = this.sy(p.y, cam) + cam.ppm * 0.22;
+        const py = this.sy(p.y, cam) + cam.ppm * 0.16;
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
-      ctx.lineWidth = Math.max(2, cam.ppm * 0.1);
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.32)';
+      ctx.lineWidth = Math.max(1.5, cam.ppm * 0.06);
       ctx.stroke();
     }
   }
 
-  /** Lane paint, ripples, puddles and loose stones that make the surface read. */
+  /** Lane paint, ripples, puddles, stones and grain that make each surface read. */
   private drawSurfaceDetail(
     surface: SurfaceId,
     visible: { x: number; y: number }[],
@@ -417,77 +549,166 @@ export class Renderer {
   ): void {
     const ctx = this.ctx;
     const asphalt = surface.startsWith('asphalt');
+    const first = visible[0]!;
 
-    // Shoulder shadow a little below the crown.
-    ctx.save();
-    ctx.beginPath();
-    visible.forEach((p, i) => {
-      const x = this.sx(p.x, cam);
-      const y = this.sy(p.y, cam) + cam.ppm * 0.75;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.16)';
-    ctx.lineWidth = cam.ppm * 0.5;
-    ctx.stroke();
-    ctx.restore();
-
-    if (asphalt) {
-      ctx.save();
+    const pathAt = (offsetM: number): void => {
       ctx.beginPath();
       visible.forEach((p, i) => {
         const x = this.sx(p.x, cam);
-        const y = this.sy(p.y, cam) + cam.ppm * 0.22;
+        const y = this.sy(p.y, cam) + cam.ppm * offsetM;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
+    };
+
+    if (asphalt) {
+      // Aggregate: fine speckle just under the crown.
+      for (let i = 0; i < visible.length; i += 1) {
+        const p = visible[i]!;
+        const r = hash01(Math.round(p.x * 37) + (surface === 'asphalt-wet' ? 11 : 3));
+        if (r < 0.55) continue;
+        const x = this.sx(p.x, cam);
+        const y = this.sy(p.y, cam) + cam.ppm * (0.05 + r * 0.12);
+        ctx.fillStyle = r > 0.82 ? 'rgba(226, 226, 220, 0.16)' : 'rgba(0,0,0,0.22)';
+        ctx.fillRect(x, y, 1 + r * 2, 1);
+      }
+
+      // Longitudinal tar seams every ~9 m.
+      ctx.strokeStyle = 'rgba(10, 10, 12, 0.35)';
+      ctx.lineWidth = Math.max(1, cam.ppm * 0.02);
+      const seamStart = Math.floor(first.x / 9) * 9;
+      for (let xM = seamStart; xM < first.x + (this.width / cam.ppm) + 9; xM += 9) {
+        const g = groundPointAt(this.track.runs, xM);
+        if (!g) continue;
+        const px = this.sx(xM, cam);
+        const py = this.sy(g.y, cam);
+        ctx.beginPath();
+        ctx.moveTo(px, py + 2);
+        ctx.lineTo(px + 3, py + cam.ppm * 0.16);
+        ctx.stroke();
+      }
+
+      // Edge line at the crown, then lane dashes a little below it.
+      pathAt(0.035);
       ctx.strokeStyle = surface === 'asphalt-wet'
-        ? 'rgba(225, 238, 246, 0.4)'
-        : 'rgba(244, 240, 226, 0.42)';
-      ctx.lineWidth = Math.max(1.5, cam.ppm * 0.045);
+        ? 'rgba(226, 238, 246, 0.5)'
+        : 'rgba(242, 238, 224, 0.45)';
+      ctx.lineWidth = Math.max(1.5, cam.ppm * 0.035);
       ctx.setLineDash([cam.ppm * 0.55, cam.ppm * 0.75]);
       ctx.stroke();
-      ctx.restore();
+      ctx.setLineDash([]);
+
+      if (surface === 'asphalt-wet') {
+        // Standing water: sky reflection plus a specular streak.
+        for (let i = 0; i < visible.length; i += 3) {
+          const p = visible[i]!;
+          const r = hash01(Math.round(p.x * 13) + 7);
+          if (r < 0.55) continue;
+          const x = this.sx(p.x, cam);
+          const y = this.sy(p.y, cam) + cam.ppm * 0.09;
+          ctx.beginPath();
+          ctx.ellipse(x, y, cam.ppm * (0.25 + r * 0.5), cam.ppm * 0.035, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(198, 222, 236, 0.18)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(x - cam.ppm * 0.1, y - cam.ppm * 0.01, cam.ppm * 0.12, cam.ppm * 0.012, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+          ctx.fill();
+        }
+      }
       return;
     }
 
     if (surface === 'sand') {
+      // Ripple crests: nested arcs along the surface.
       for (let i = 0; i < visible.length; i += 2) {
         const p = visible[i]!;
         const r = hash01(Math.round(p.x * 7));
-        if (r < 0.4) continue;
         const x = this.sx(p.x, cam);
-        const y = this.sy(p.y, cam) + cam.ppm * (0.25 + r * 0.3);
+        const y = this.sy(p.y, cam) + cam.ppm * (0.1 + r * 0.18);
         ctx.beginPath();
-        ctx.arc(x, y, cam.ppm * (0.18 + r * 0.16), Math.PI * 0.15, Math.PI * 0.85);
-        ctx.strokeStyle = 'rgba(255, 238, 205, 0.22)';
-        ctx.lineWidth = Math.max(1, cam.ppm * 0.02);
+        ctx.ellipse(x, y, cam.ppm * (0.3 + r * 0.35), cam.ppm * (0.05 + r * 0.03), 0, 0.1, Math.PI - 0.1);
+        ctx.strokeStyle = r > 0.55 ? 'rgba(255, 240, 205, 0.3)' : 'rgba(120, 92, 55, 0.18)';
+        ctx.lineWidth = Math.max(1, cam.ppm * 0.014);
         ctx.stroke();
       }
-    } else if (surface === 'mud') {
-      for (let i = 0; i < visible.length; i += 4) {
+      return;
+    }
+
+    if (surface === 'mud') {
+      // Wet sheen and standing puddles.
+      for (let i = 0; i < visible.length; i += 3) {
         const p = visible[i]!;
         const r = hash01(Math.round(p.x * 13) + 5);
-        if (r < 0.5) continue;
+        if (r < 0.4) continue;
         const x = this.sx(p.x, cam);
-        const y = this.sy(p.y, cam) + cam.ppm * 0.35;
+        const y = this.sy(p.y, cam) + cam.ppm * (0.06 + r * 0.1);
         ctx.beginPath();
-        ctx.ellipse(x, y, cam.ppm * (0.35 + r * 0.4), cam.ppm * 0.12, 0, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(20, 17, 12, 0.32)';
+        ctx.ellipse(x, y, cam.ppm * (0.35 + r * 0.45), cam.ppm * (0.04 + r * 0.03), 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(24, 20, 14, 0.45)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x - cam.ppm * 0.05, y - cam.ppm * 0.01, cam.ppm * (0.12 + r * 0.1), cam.ppm * 0.012, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(180, 200, 210, 0.14)';
         ctx.fill();
       }
-    } else if (surface === 'gravel' || surface === 'rock' || surface === 'dirt') {
+      return;
+    }
+
+    if (surface === 'gravel' || surface === 'rock' || surface === 'dirt') {
+      // Loose stones with a lit top edge and a shadow.
       for (let i = 0; i < visible.length; i += 1) {
         const p = visible[i]!;
         const r = hash01(Math.round(p.x * 31 + surface.length));
-        if (r < 0.55) continue;
+        if (r < 0.5) continue;
         const x = this.sx(p.x, cam);
-        const y = this.sy(p.y, cam) + cam.ppm * (0.15 + r * 0.6);
-        ctx.fillStyle = 'rgba(220, 210, 190, 0.18)';
+        const y = this.sy(p.y, cam) + cam.ppm * (0.04 + r * 0.14);
+        const size = Math.max(1, cam.ppm * (0.02 + r * 0.035));
         ctx.beginPath();
-        ctx.arc(x, y, Math.max(1, cam.ppm * 0.03), 0, Math.PI * 2);
+        ctx.ellipse(x, y, size, size * 0.7, r * 2, 0, Math.PI * 2);
+        ctx.fillStyle = surface === 'dirt' ? 'rgba(58, 44, 30, 0.55)' : 'rgba(160, 154, 142, 0.5)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x - size * 0.25, y - size * 0.3, size * 0.5, size * 0.3, r * 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
         ctx.fill();
       }
+      if (surface === 'rock') {
+        // Strata and fractures.
+        ctx.strokeStyle = 'rgba(20, 18, 16, 0.3)';
+        ctx.lineWidth = Math.max(1, cam.ppm * 0.018);
+        for (let i = 0; i < visible.length; i += 4) {
+          const p = visible[i]!;
+          const x = this.sx(p.x, cam);
+          const y = this.sy(p.y, cam);
+          ctx.beginPath();
+          ctx.moveTo(x, y + cam.ppm * 0.05);
+          ctx.lineTo(x + cam.ppm * 0.2, y + cam.ppm * 0.12);
+          ctx.lineTo(x + cam.ppm * 0.32, y + cam.ppm * 0.08);
+          ctx.stroke();
+        }
+      }
+      return;
+    }
+
+    if (surface === 'wood') {
+      // Plank joints with nails.
+      const start = Math.floor(first.x / 1.6) * 1.6;
+      for (let xM = start; xM < first.x + this.width / cam.ppm + 1.6; xM += 1.6) {
+        const g = groundPointAt(this.track.runs, xM);
+        if (!g) continue;
+        const px = this.sx(xM, cam);
+        const py = this.sy(g.y, cam);
+        ctx.strokeStyle = 'rgba(40, 26, 14, 0.55)';
+        ctx.lineWidth = Math.max(1, cam.ppm * 0.02);
+        ctx.beginPath();
+        ctx.moveTo(px, py + 1);
+        ctx.lineTo(px + 2, py + cam.ppm * 0.14);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(210, 205, 195, 0.4)';
+        ctx.fillRect(px + 2, py + cam.ppm * 0.05, 1.5, 1.5);
+      }
+      return;
     }
   }
 
@@ -772,50 +993,105 @@ export class Renderer {
 
   // -------------------------------------------------------------- vehicle ----
   private drawVehicle(state: RenderState): void {
-    const ctx = this.ctx;
-    const { vehicle, camera: cam } = state;
-    const body = vehicle.chassis;
-    const pos = body.getPosition();
-    const angle = body.getAngle();
-    const ppm = cam.ppm;
+    this.drawVehicleAt(state.vehicle, state, state.camera);
+  }
 
-    const ground = groundPointAt(this.track.runs, pos.x);
+  private drawVehicleAt(vehicle: Vehicle, state: RenderState, cam: Camera): void {
+    const ctx = this.ctx;
+    const pose = vehicle.renderPose(state.alpha);
+    const ppm = cam.ppm;
+    const tele = vehicle.telemetry;
+
+    const ground = groundPointAt(this.track.runs, pose.x);
     if (ground) {
+      const wheelOffsets = pose.wheels.map((w) => (w.x - pose.x) * ppm);
       drawCarShadow(
         ctx,
-        this.sx(pos.x, cam),
+        this.sx(pose.x, cam),
         this.sy(ground.y, cam),
         vehicle.car.numbers.lengthM * ppm,
         ppm,
+        wheelOffsets,
       );
     }
 
-    const wheelLocals = vehicle.wheels.map((w) => {
-      const wp = w.body.getPosition();
-      const local = body.getLocalPoint(wp);
-      return { xM: local.x, yM: local.y, radiusM: w.radiusM };
+    const cos = Math.cos(-pose.angle);
+    const sin = Math.sin(-pose.angle);
+    const wheelLocals = pose.wheels.map((w) => {
+      const dx = w.x - pose.x;
+      const dy = w.y - pose.y;
+      return {
+        xM: dx * cos - dy * sin,
+        yM: dx * sin + dy * cos,
+        radiusM: vehicle.car.numbers.wheelRadiusM,
+      };
     });
 
-    // Wheels first, then the shell with arch cut-outs.
-    for (let i = 0; i < vehicle.wheels.length; i++) {
-      const wheel = vehicle.wheels[i]!;
-      const wp = wheel.body.getPosition();
+    for (let i = 0; i < pose.wheels.length; i++) {
+      const w = pose.wheels[i]!;
+      const teleWheel = tele.wheels[i];
       drawWheel(ctx, {
-        x: this.sx(wp.x, cam),
-        y: this.sy(wp.y, cam),
-        radiusPx: wheel.radiusM * ppm,
-        angleRad: wheel.body.getAngle(),
+        x: this.sx(w.x, cam),
+        y: this.sy(w.y, cam),
+        radiusPx: vehicle.car.numbers.wheelRadiusM * ppm,
+        angleRad: w.angle,
         index: i === 0 ? 0 : 1,
-        slip: 0,
+        slip: teleWheel?.slip ?? 0,
+        rimStyle: vehicle.car.cosmetics.rims === 'stock'
+          ? vehicle.car.profile.art.rimStyle
+          : vehicle.car.cosmetics.rims === 'sport'
+            ? 'rugged'
+            : 'mesh',
+        braking: tele.brake > 0.15,
       });
     }
 
     ctx.save();
-    ctx.translate(this.sx(pos.x, cam), this.sy(pos.y, cam));
-    ctx.rotate(-angle);
-    drawCarBody(ctx, vehicle.car, ppm, wheelLocals);
+    ctx.translate(this.sx(pose.x, cam), this.sy(pose.y, cam));
+    ctx.rotate(-pose.angle);
+    drawCarBody(ctx, vehicle.car, ppm, wheelLocals, tele.damage, {
+      brake: tele.brake,
+      damage: tele.damage,
+      lights: false,
+    });
+    ctx.restore();
+  }
 
-    // Wheelspin smoke is drawn at the wheel, not on the body.
+  private drawGhost(ghost: { pose: GhostPose; car: ResolvedCar }, cam: Camera): void {
+    const ctx = this.ctx;
+    const ppm = cam.ppm;
+    const pose = ghost.pose;
+    const cos = Math.cos(-pose.angle);
+    const sin = Math.sin(-pose.angle);
+    const wheelLocals = [
+      { xM: -ghost.car.numbers.wheelbaseM / 2, yM: -0.27, radiusM: ghost.car.numbers.wheelRadiusM },
+      { xM: ghost.car.numbers.wheelbaseM / 2, yM: -0.27, radiusM: ghost.car.numbers.wheelRadiusM },
+    ].map((w) => ({
+      ...w,
+      xM: w.xM * cos - w.yM * sin,
+      yM: w.xM * sin + w.yM * cos,
+    }));
+
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    for (let i = 0; i < 2; i++) {
+      const local = wheelLocals[i]!;
+      const wx = pose.x + local.xM;
+      const wy = pose.y + local.yM;
+      drawWheel(ctx, {
+        x: this.sx(wx, cam),
+        y: this.sy(wy, cam),
+        radiusPx: ghost.car.numbers.wheelRadiusM * ppm,
+        angleRad: i === 0 ? pose.frontWheelAngle : pose.rearWheelAngle,
+        index: i === 0 ? 0 : 1,
+        slip: 0,
+        rimStyle: ghost.car.profile.art.rimStyle,
+      });
+    }
+    ctx.translate(this.sx(pose.x, cam), this.sy(pose.y, cam));
+    ctx.rotate(-pose.angle);
+    ctx.filter = 'saturate(0.2) brightness(1.6)';
+    drawCarBody(ctx, ghost.car, ppm, wheelLocals, 0, { lights: true });
     ctx.restore();
   }
 

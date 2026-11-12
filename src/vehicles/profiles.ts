@@ -29,6 +29,8 @@ export interface CarNumbers {
 
 export interface CarArt {
   kind: 'sedan' | 'suv' | 'sport';
+  /** Optional per-model side-profile override; otherwise the kind profile is used. */
+  profile?: readonly { u: number; v: number }[];
   bodyColor: string;
   bodyDark: string;
   bodyLight: string;
@@ -46,6 +48,33 @@ export interface CarArt {
   roofFront: number;
   windshieldBase: number;
   plateFa: string;
+  /** Model-specific equipment that changes the drawn details. */
+  detail?: CarDetail;
+}
+
+/**
+ * Per-model visual equipment. The silhouette separates the cars at a glance;
+ * these flags separate the lamps, grilles, cladding and trim so a Prado never
+ * reads as a tall 206.
+ */
+export interface CarDetail {
+  /** Headlamp shape. */
+  lamp: 'round' | 'slim' | 'projector' | 'led';
+  /** Front grille treatment. */
+  grille: 'mesh' | 'slat' | 'chrome-bar' | 'none';
+  /** Tail lamp treatment. */
+  tail: 'block' | 'wrap' | 'round';
+  roofRails?: boolean;
+  /** Dark plastic arch trim and lower-body cladding. */
+  cladding?: boolean;
+  sideStep?: boolean;
+  spoiler?: 'lip' | 'wing';
+  /** Chrome window surround and door handles. */
+  chrome?: boolean;
+  /** Shark-fin antenna. */
+  antenna?: boolean;
+  /** Model-specific cabin glass outline (falls back to the roofline). */
+  cabin?: readonly { u: number; v: number }[];
 }
 
 export interface CarProfile {
@@ -83,10 +112,21 @@ export interface CarProfile {
 
 export interface CarUpgrades {
   engine: number;
+  transmission: number;
+  clutch: number;
   tires: number;
   suspension: number;
   brakes: number;
   weight: number;
+  differential: number;
+}
+
+export type PaintId = 'stock' | 'amber' | 'graphite' | 'cream' | 'racing';
+export type RimId = 'stock' | 'sport' | 'mesh';
+
+export interface CarCosmetics {
+  paint: PaintId;
+  rims: RimId;
 }
 
 export type UpgradeKey = keyof CarUpgrades;
@@ -122,14 +162,28 @@ export interface ResolvedCar {
   auto: AutoSpec | null;
   setup: CarSetup;
   condition: CarCondition;
+  upgrades: CarUpgrades;
+  cosmetics: CarCosmetics;
 }
 
 export const DEFAULT_UPGRADES: CarUpgrades = {
   engine: 0,
+  transmission: 0,
+  clutch: 0,
   tires: 0,
   suspension: 0,
   brakes: 0,
   weight: 0,
+  differential: 0,
+};
+
+export const DEFAULT_COSMETICS: CarCosmetics = { paint: 'stock', rims: 'stock' };
+
+export const PAINT_COLORS: Record<Exclude<PaintId, 'stock'>, { body: string; dark: string; light: string }> = {
+  amber: { body: '#b9791f', dark: '#6d430d', light: '#e2ab54' },
+  graphite: { body: '#3a4048', dark: '#1b1f24', light: '#5f6873' },
+  cream: { body: '#d9d2c1', dark: '#8b8578', light: '#f4efe4' },
+  racing: { body: '#8f2b22', dark: '#4c130e', light: '#c45445' },
 };
 
 export const DEFAULT_SETUP: CarSetup = {
@@ -208,8 +262,8 @@ export const CAR_PROFILES: readonly CarProfile[] = [
         { rpm: 2500, nm: 178 },
         { rpm: 3500, nm: 178 },
         { rpm: 4500, nm: 174 },
-        { rpm: 5500, nm: 148 },
-        { rpm: 6200, nm: 128 },
+        { rpm: 5500, nm: 142 },
+        { rpm: 6200, nm: 126 },
         { rpm: 6500, nm: 108 },
       ],
       engineBrakeCoef: 0.012,
@@ -237,12 +291,31 @@ export const CAR_PROFILES: readonly CarProfile[] = [
     auto: null,
     art: {
       kind: 'sedan',
+      // Shahin: short rear deck, tall cabin, steep windscreen.
+      profile: [
+        { u: -0.5, v: 0.3 },
+        { u: -0.496, v: 0.46 },
+        { u: -0.468, v: 0.56 },
+        { u: -0.4, v: 0.6 },
+        { u: -0.3, v: 0.615 },
+        { u: -0.2, v: 0.965 },
+        { u: -0.06, v: 1.0 },
+        { u: 0.1, v: 1.0 },
+        { u: 0.18, v: 0.9 },
+        { u: 0.27, v: 0.66 },
+        { u: 0.36, v: 0.64 },
+        { u: 0.45, v: 0.6 },
+        { u: 0.497, v: 0.52 },
+        { u: 0.5, v: 0.4 },
+        { u: 0.49, v: 0.18 },
+      ],
       bodyColor: '#d8dde3',
       bodyDark: '#8d959e',
       bodyLight: '#f3f5f7',
       accentColor: '#b6462f',
       glassColor: '#26313c',
       rimStyle: 'spoke',
+      detail: { lamp: 'projector', grille: 'slat', tail: 'block', antenna: true },
       beltRatio: 0.58,
       roofRatio: 0.95,
       hoodRatio: 0.72,
@@ -345,12 +418,40 @@ export const CAR_PROFILES: readonly CarProfile[] = [
     },
     art: {
       kind: 'suv',
+      // Prado 150: upright glasshouse, long roof, high belt line.
+      profile: [
+        { u: -0.5, v: 0.34 },
+        { u: -0.5, v: 0.62 },
+        { u: -0.49, v: 0.8 },
+        { u: -0.46, v: 0.9 },
+        { u: -0.4, v: 0.96 },
+        { u: -0.3, v: 0.99 },
+        { u: -0.1, v: 1.0 },
+        { u: 0.12, v: 1.0 },
+        { u: 0.22, v: 0.94 },
+        { u: 0.28, v: 0.78 },
+        { u: 0.33, v: 0.72 },
+        { u: 0.42, v: 0.7 },
+        { u: 0.48, v: 0.66 },
+        { u: 0.5, v: 0.56 },
+        { u: 0.5, v: 0.4 },
+        { u: 0.49, v: 0.2 },
+      ],
       bodyColor: '#2f3b34',
       bodyDark: '#18211d',
       bodyLight: '#4c5c51',
       accentColor: '#c9a227',
       glassColor: '#1b2a2e',
       rimStyle: 'rugged',
+      detail: {
+        lamp: 'led',
+        grille: 'chrome-bar',
+        tail: 'block',
+        roofRails: true,
+        cladding: true,
+        sideStep: true,
+        chrome: true,
+      },
       beltRatio: 0.6,
       roofRatio: 0.965,
       hoodRatio: 0.79,
@@ -418,7 +519,7 @@ export const CAR_PROFILES: readonly CarProfile[] = [
         { rpm: 1350, nm: 300 },
         { rpm: 4000, nm: 300 },
         { rpm: 5000, nm: 255 },
-        { rpm: 6000, nm: 215 },
+        { rpm: 6000, nm: 219 },
         { rpm: 6500, nm: 190 },
         { rpm: 6800, nm: 170 },
       ],
@@ -452,12 +553,32 @@ export const CAR_PROFILES: readonly CarProfile[] = [
     },
     art: {
       kind: 'sport',
+      // 320i G20: low roof, long bonnet, short front overhang.
+      profile: [
+        { u: -0.5, v: 0.34 },
+        { u: -0.497, v: 0.48 },
+        { u: -0.47, v: 0.57 },
+        { u: -0.41, v: 0.6 },
+        { u: -0.33, v: 0.615 },
+        { u: -0.24, v: 0.66 },
+        { u: -0.14, v: 0.94 },
+        { u: -0.02, v: 1.0 },
+        { u: 0.1, v: 1.0 },
+        { u: 0.17, v: 0.93 },
+        { u: 0.22, v: 0.72 },
+        { u: 0.3, v: 0.66 },
+        { u: 0.4, v: 0.62 },
+        { u: 0.48, v: 0.56 },
+        { u: 0.5, v: 0.44 },
+        { u: 0.49, v: 0.2 },
+      ],
       bodyColor: '#2b4a6f',
       bodyDark: '#152941',
       bodyLight: '#4a6d94',
       accentColor: '#c8ccd2',
       glassColor: '#141f2b',
       rimStyle: 'mesh',
+      detail: { lamp: 'slim', grille: 'mesh', tail: 'wrap', antenna: true },
       beltRatio: 0.55,
       roofRatio: 0.93,
       hoodRatio: 0.69,
@@ -479,18 +600,24 @@ export function getCar(id: string): CarProfile {
 
 export const UPGRADE_LABELS_FA: Record<UpgradeKey, string> = {
   engine: 'موتور و نرم‌افزار',
+  transmission: 'گیربکس و نسبت‌ها',
+  clutch: 'کلاچ و صفحه',
   tires: 'لاستیک و چسبندگی',
   suspension: 'تعلیق و کمک‌فنر',
   brakes: 'ترمز و دیسک',
   weight: 'کاهش وزن',
+  differential: 'دیفرانسیل',
 };
 
 export const UPGRADE_COSTS: Record<UpgradeKey, readonly number[]> = {
   engine: [1800, 3200, 5200],
+  transmission: [1500, 2800, 4500],
+  clutch: [900, 1800, 3000],
   tires: [1200, 2400, 4000],
   suspension: [1400, 2600, 4200],
   brakes: [1100, 2200, 3600],
   weight: [1600, 3000, 5000],
+  differential: [1300, 2500, 3900],
 };
 
 /** Discount for upgraded parts is applied to the vehicle's resolved specs. */
@@ -499,12 +626,16 @@ export function resolveCar(
   upgrades: CarUpgrades = DEFAULT_UPGRADES,
   setup: CarSetup = DEFAULT_SETUP,
   condition: CarCondition = DEFAULT_CONDITION,
+  cosmetics: CarCosmetics = DEFAULT_COSMETICS,
 ): ResolvedCar {
   const engineLvl = clamp(upgrades.engine, 0, 3);
   const tireLvl = clamp(upgrades.tires, 0, 3);
   const suspLvl = clamp(upgrades.suspension, 0, 3);
   const brakeLvl = clamp(upgrades.brakes, 0, 3);
   const weightLvl = clamp(upgrades.weight, 0, 3);
+  const transLvl = clamp(upgrades.transmission ?? 0, 0, 3);
+  const clutchLvl = clamp(upgrades.clutch ?? 0, 0, 3);
+  const diffLvl = clamp(upgrades.differential ?? 0, 0, 3);
 
   const torqueScale = 1 + 0.055 * engineLvl;
   const health = clamp(condition.engine, 0.35, 1);
@@ -524,6 +655,7 @@ export function resolveCar(
   const grip =
     profile.numbers.tireGrip *
     (1 + 0.045 * tireLvl) *
+    (1 + 0.018 * diffLvl) *
     tirePressureGrip *
     tireConditionGrip;
 
@@ -557,11 +689,23 @@ export function resolveCar(
       1.35,
   };
 
-  const gearbox: GearboxSpec = { ...profile.gearbox, finalDrive };
+  const gearbox: GearboxSpec = {
+    ...profile.gearbox,
+    finalDrive,
+    shiftTimeS: profile.gearbox.shiftTimeS * (1 - 0.08 * transLvl),
+  };
+  const clutch: ClutchSpec | null = profile.clutch
+    ? {
+        ...profile.clutch,
+        maxTorqueNm: profile.clutch.maxTorqueNm * (1 + 0.12 * clutchLvl),
+        biteEnd: Math.max(0.58, profile.clutch.biteEnd - 0.02 * clutchLvl),
+      }
+    : null;
   const auto: AutoSpec | null = profile.auto
     ? {
         ...profile.auto,
         upshiftRpm: profile.auto.upshiftRpm + 90 * engineLvl,
+        shiftTimeS: profile.auto.shiftTimeS * (1 - 0.08 * transLvl),
         creepTorqueNm: profile.auto.creepTorqueNm * (1 - 0.2 * weightLvl),
       }
     : null;
@@ -570,11 +714,13 @@ export function resolveCar(
     profile,
     numbers,
     engine,
-    clutch: profile.clutch,
+    clutch,
     gearbox,
     auto,
     setup,
     condition,
+    upgrades,
+    cosmetics,
   };
 }
 

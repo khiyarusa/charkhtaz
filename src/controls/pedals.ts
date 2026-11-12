@@ -153,7 +153,18 @@ export class PedalControls {
     }
   }
 
-  /** Spring return + keyboard decay. Call once per presented frame. */
+  /**
+   * Keyboard press rate, units per second. A key is a digital input, so it is
+   * ramped like a fast foot: pressing W/S/C actually moves the pedal (the old
+   * implementation only stopped the spring, so the keyboard never drove).
+   */
+  private static readonly KEY_PRESS_RATE: Record<PedalKind, number> = {
+    throttle: 5.5,
+    brake: 7,
+    clutch: 4.5,
+  };
+
+  /** Spring return + keyboard ramp. Call once per presented frame. */
   update(dt: number): void {
     for (const pedal of this.pedals) {
       if (pedal.kind === 'clutch' && !this.clutchVisible) continue;
@@ -161,7 +172,19 @@ export class PedalControls {
         (pedal.kind === 'throttle' && (this.keys.has('KeyW') || this.keys.has('ArrowUp'))) ||
         (pedal.kind === 'brake' && (this.keys.has('KeyS') || this.keys.has('ArrowDown'))) ||
         (pedal.kind === 'clutch' && this.keys.has('KeyC'));
-      if (pedal.pointerId !== null || keyHeld) continue;
+
+      // A held pointer owns the pedal completely; keys must not fight it.
+      if (pedal.pointerId !== null) continue;
+
+      if (keyHeld) {
+        const target = 1;
+        if (pedal.value < target) {
+          pedal.value = Math.min(target, pedal.value + PedalControls.KEY_PRESS_RATE[pedal.kind] * dt);
+          this.paint(pedal);
+        }
+        continue;
+      }
+
       if (pedal.value <= 0.0001) {
         if (pedal.value !== 0) {
           pedal.value = 0;

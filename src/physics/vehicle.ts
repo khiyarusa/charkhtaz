@@ -109,7 +109,16 @@ export class Vehicle {
   private impactAcc = 0;
   private lastImpact = 0;
   private elapsedS = 0;
+  private damagePenalty = 0;
+  private prevX = 0;
+  private prevY = 0;
+  private prevAngle = 0;
+  private prevWheelX: number[] = [];
+  private prevWheelY: number[] = [];
+  private prevWheelAngle: number[] = [];
   private readonly drivenIndices: number[] = [];
+  /** Suspension force computed at the end of the previous step, N per corner. */
+  private readonly suspensionForceN: number[] = [];
 
   constructor(
     world: World,
@@ -138,13 +147,21 @@ export class Vehicle {
       type: 'dynamic',
       position: Vec2(startX, centerY),
       linearDamping: 0.01,
-      angularDamping: 0.15,
+      // A side-view car that can rotate freely ends every jump on its roof. The
+      // damping is a game-feel constant, not a physical claim: it keeps the
+      // body settled without touching the translational simulation.
+      angularDamping: 0.55,
       bullet: true,
     });
-    this.chassis.createFixture(new Box(halfL, halfH), {
+    this.chassis.createFixture(new Box(halfL * 0.94, halfH * 0.58, Vec2(0, halfH * 0.4), 0), {
       density: n.massKg / (4 * halfL * halfH),
       friction: 0.35,
       restitution: 0.04,
+      // The body box sits above the wheel tops, so it cannot catch kerbs during
+      // normal driving; it still collides with the ground so an inverted car
+      // rests on its roof instead of sinking through the terrain.
+      filterCategoryBits: 0x0002,
+      filterMaskBits: 0x0001 | 0x0008,
     });
 
     const frontX = n.wheelbaseM / 2;
@@ -172,6 +189,8 @@ export class Vehicle {
         density: wheelMass / (Math.PI * radius * radius),
         friction: 0,
         restitution: 0.02,
+        filterCategoryBits: 0x0004,
+        filterMaskBits: 0x0001 | 0x0008,
       });
 
       // The world anchor is the suspension top mount; planck derives the
@@ -222,6 +241,7 @@ export class Vehicle {
       const omega = 2 * Math.PI * n.suspensionFrequencyHz;
       w.springK = cornerMass * omega * omega;
       w.damperC = 2 * n.suspensionDamping * Math.sqrt(w.springK * cornerMass);
+      w.springForceN = 0;
     });
 
     if (car.profile.transmission === 'manual' && car.clutch) {
@@ -235,6 +255,7 @@ export class Vehicle {
       this.auto = new AutoDrivetrain(car.engine, car.gearbox, car.auto, {
         wheelRadiusM: radius,
         wheelInertia: n.axleInertiaKgM2 / 2,
+        topSpeedKph: n.topSpeedKph,
       });
       this.manual = null;
     } else {
@@ -242,6 +263,47 @@ export class Vehicle {
     }
 
     world.on('begin-contact', this.onBeginContact);
+    this.capturePreviousPose();
+  }
+
+  /** Called at the start of every physics step to support render interpolation. */
+  private capturePreviousPose(): void {
+    const pos = this.chassis.getPosition();
+    this.prevX = pos.x;
+    this.prevY = pos.y;
+    this.prevAngle = this.chassis.getAngle();
+    this.prevWheelX = this.wheels.map((w) => w.body.getPosition().x);
+    this.prevWheelY = this.wheels.map((w) => w.body.getPosition().y);
+    this.prevWheelAngle = this.wheels.map((w) => w.body.getAngle());
+  }
+
+  /** Interpolated visual pose; physics still runs at the fixed step. */
+  renderPose(alpha: number): {
+    x: number;
+    y: number;
+    angle: number;
+    wheels: { x: number; y: number; angle: number }[];
+  } {
+    const a = clamp01(alpha);
+    const pos = this.chassis.getPosition();
+    return {
+      x: this.prevX + (pos.x - this.prevX) * a,
+      y: this.prevY + (pos.y - this.prevY) * a,
+      angle: this.prevAngle + (this.chassis.getAngle() - this.prevAngle) * a,
+      wheels: this.wheels.map((w, i) => {
+        const wp = w.body.getPosition();
+        return {
+          x: (this.prevWheelX[i] ?? wp.x) + (wp.x - (this.prevWheelX[i] ?? wp.x)) * a,
+          y: (this.prevWheelY[i] ?? wp.y) + (wp.y - (this.prevWheelY[i] ?? wp.y)) * a,
+          angle: (this.prevWheelAngle[i] ?? w.body.getAngle()) +
+            (w.body.getAngle() - (this.prevWheelAngle[i] ?? w.body.getAngle())) * a,
+        };
+      }),
+    };
+  }
+
+  setDamagePenalty(level: number): void {
+    this.damagePenalty = clamp01(level);
   }
 
   get pedals(): PedalInputs {
@@ -259,13 +321,15 @@ export class Vehicle {
   /** Apply one fixed step of controls and forces. Call `world.step` afterwards. */
   update(dt: number, pedals: PedalInputs): void {
     this.elapsedS += dt;
+    this.capturePreviousPose();
     this.pedalState = {
       throttle: clamp01(pedals.throttle),
       brake: clamp01(pedals.brake),
       clutch: clamp01(pedals.clutch),
     };
 
-    this.applySuspension(dt);
+    this.solveSuspension();
+    this.applySuspensionForces();
     this.scanContacts();
 
     const velocity = this.chassis.getLinearVelocity();
@@ -276,6 +340,7 @@ export class Vehicle {
     const mass = n.massKg;
     const absEnabled = n.hasAbs;
     const brakes = this.pedalState.brake;
+    const damageGrip = 1 - 0.12 * this.damagePenalty;
 
     const wheelsByIndex: DrivenWheelState[] = [];
     const brakeTorques: number[] = [];
@@ -285,13 +350,13 @@ export class Vehicle {
         omegaRadS: w.omegaRadS,
         loadN: w.loadN,
         surface: w.grounded ? w.surface : AIR,
-        tireGrip: n.tireGrip,
+        tireGrip: n.tireGrip * damageGrip,
         forceN: 0,
       });
       brakeTorques.push(this.brakeTorqueFor(w, brakes));
     }
 
-    let throttle = this.pedalState.throttle;
+    let throttle = this.pedalState.throttle * (1 - 0.15 * this.damagePenalty);
     if (this.car.setup.assistTraction && Math.abs(speed) < 12) {
       const slip = this.meanSlip();
       if (slip > 0.22) throttle *= clamp(1 - (slip - 0.22) * 1.8, 0.45, 1);
@@ -334,7 +399,7 @@ export class Vehicle {
         n.axleInertiaKgM2 / 2,
         speed,
         dt,
-        n.tireGrip,
+        n.tireGrip * damageGrip,
       );
       wheel.omegaRadS = result.omegaRadS;
       wheel.forceN = result.forceN;
@@ -367,6 +432,29 @@ export class Vehicle {
     if (Number.isFinite(drag)) {
       this.chassis.applyForce(Vec2(-drag, 0), this.chassis.getWorldCenter(), true);
     }
+
+    // Attitude assist: a PD torque that levels the car in flight and stops it
+    // from wheelie-ing onto its tail when only one wheel is loaded. Without it a
+    // side-view car lands on its roof after most jumps and loses front grip on
+    // every crest, neither of which the player can correct without steering.
+    const groundedCount = this.wheels.reduce((n, w) => n + (w.grounded ? 1 : 0), 0);
+    if (groundedCount < 2) {
+      const angle = this.chassis.getAngle();
+      const omega = this.chassis.getAngularVelocity();
+      const inertia = this.chassis.getInertia();
+      // Shortest signed angle back to level, with a deadband so a legitimate
+      // climb angle is not fought.
+      const raw = Math.atan2(Math.sin(-angle), Math.cos(-angle));
+      const error = Math.abs(raw) > 0.5 ? raw - Math.sign(raw) * 0.5 : 0;
+      const torque = inertia * (2.8 * error - 1.9 * omega);
+      const cap = inertia * 7;
+      this.chassis.applyTorque(Math.max(-cap, Math.min(cap, torque)), true);
+      const maxOmega = 5;
+      if (Math.abs(omega) > maxOmega) {
+        this.chassis.setAngularVelocity(Math.sign(omega) * maxOmega);
+      }
+    }
+
 
     // Wheel bodies spin with the simulated omega (visual + collision reality).
     for (const wheel of this.wheels) {
@@ -457,66 +545,109 @@ export class Vehicle {
       wheel.loadN = 0;
     }
 
-    // Tyre normal load is the suspension force at that corner, capped at a
-    // sane multiple of the static axle load so a landing spike cannot create
-    // an infinite friction force.
-    const staticLoad = (this.car.numbers.massKg * GRAVITY) / 2;
-    for (const wheel of this.wheels) {
-      wheel.loadN = wheel.grounded
-        ? clamp(Math.max(0, wheel.springForceN), 0, staticLoad * 4)
+    // Tyre normal load comes from the suspension force solved this step; it is
+    // clamped so a landing spike cannot create infinite friction.
+    for (const w of this.wheels) {
+      w.loadN = w.grounded
+        ? clamp(Math.max(0, w.springForceN), 0, (this.car.numbers.massKg * GRAVITY) / 2 * 4)
         : 0;
     }
   }
 
   /**
-   * Mass-based spring/damper at each corner, applied between the chassis
-   * anchor and the wheel body along the suspension axis. A bump stop adds
-   * stiffness past full compression; a droop stop keeps the wheel from
-   * hanging below its extended length.
+   * Applies the suspension force solved at the end of the previous step.
+   *
+   * The force acts on the chassis only. The wheel body is the ground sensor:
+   * its collision with the terrain sets the compression, and the travel limits
+   * are solved positionally on the heavy body (bump) or on the light wheel
+   * (droop). A force pair between a 25 kg wheel and a 1.3 t chassis is stiff
+   * enough to explode at a 60 Hz step; this formulation is unconditionally
+   * stable and still lets the wheel ride over logs and kerbs.
    */
-  private applySuspension(dt: number): void {
+  private applySuspensionForces(): void {
+    const anchorLocalY = -this.bodyHalfHeight + 0.28;
+    const axis = this.chassis.getWorldVector(Vec2(0, 1));
+    for (let i = 0; i < this.wheels.length; i++) {
+      const force = this.suspensionForceN[i] ?? 0;
+      if (!Number.isFinite(force) || force === 0) continue;
+      const wheel = this.wheels[i]!;
+      const anchor = this.chassis.getWorldPoint(Vec2(wheel.anchorX, anchorLocalY));
+      this.chassis.applyForce(Vec2(axis.x * force, axis.y * force), anchor, true);
+    }
+  }
+
+  /**
+   * Solves one step of suspension travel and stores the corner force.
+   *
+   * · Droop stop: the wheel is pulled back up to its maximum extension and its
+   *   outward velocity is removed (wheel-side, cannot inject energy into the
+   *   chassis).
+   * · Bump stop: the chassis is lifted out of the wheel and its closing
+   *   velocity is projected out (chassis-side, velocity-level, no bounce).
+   * · Spring and damper then act on the chassis over the resulting compression.
+   */
+  private solveSuspension(): void {
     const anchorLocalY = -this.bodyHalfHeight + 0.28;
     const travel = this.car.numbers.suspensionTravelM;
+    const staticCorner = (this.car.numbers.massKg * GRAVITY) / 2;
+    const maxForce = staticCorner * 5;
     const axis = this.chassis.getWorldVector(Vec2(0, 1));
-    const chassisCentre = this.chassis.getWorldCenter();
-    const chassisVelocity = this.chassis.getLinearVelocity();
-    const chassisOmega = this.chassis.getAngularVelocity();
 
-    for (const wheel of this.wheels) {
-      const anchor = this.chassis.getWorldPoint(Vec2(wheel.anchorX, anchorLocalY));
-      const wheelCentre = wheel.body.getPosition();
-      const dx = anchor.x - wheelCentre.x;
-      const dy = anchor.y - wheelCentre.y;
-      const distance = dx * axis.x + dy * axis.y;
-      const compression = wheel.restLengthM - distance;
+    for (let i = 0; i < this.wheels.length; i++) {
+      const wheel = this.wheels[i]!;
+      let anchor = this.chassis.getWorldPoint(Vec2(wheel.anchorX, anchorLocalY));
+      const wp = wheel.body.getPosition();
+      let distance = (anchor.x - wp.x) * axis.x + (anchor.y - wp.y) * axis.y;
+      const minDist = wheel.restLengthM - travel;
+      const maxDist = wheel.restLengthM + travel * 0.4;
 
-      // Velocity of the chassis at the anchor, then relative velocity along
-      // the suspension axis (positive = extending).
-      const rx = anchor.x - chassisCentre.x;
-      const ry = anchor.y - chassisCentre.y;
-      const vax = chassisVelocity.x - chassisOmega * ry;
-      const vay = chassisVelocity.y + chassisOmega * rx;
+      if (distance > maxDist) {
+        const d = distance - maxDist;
+        wheel.body.setTransform(Vec2(wp.x + axis.x * d, wp.y + axis.y * d), wheel.body.getAngle());
+        const wv = wheel.body.getLinearVelocity();
+        const axial = wv.x * axis.x + wv.y * axis.y;
+        if (axial < 0) {
+          wheel.body.setLinearVelocity(Vec2(wv.x - axis.x * axial, wv.y - axis.y * axial));
+        }
+        distance = maxDist;
+      }
+
+      if (distance < minDist) {
+        const excess = minDist - distance;
+        // Velocity-level stop only: the chassis may not keep closing on the
+        // wheel, but it is not teleported upward (position correction every
+        // step launched the car off small kerbs). The progressive spring below
+        // lifts the chassis over the obstacle instead.
+        const cv = this.chassis.getLinearVelocity();
+        const wv = wheel.body.getLinearVelocity();
+        const relAxial = (cv.x - wv.x) * axis.x + (cv.y - wv.y) * axis.y;
+        if (relAxial < 0) {
+          this.chassis.setLinearVelocity(Vec2(cv.x - axis.x * relAxial, cv.y - axis.y * relAxial));
+        }
+        distance = minDist + Math.max(0, excess);
+        anchor = this.chassis.getWorldPoint(Vec2(wheel.anchorX, anchorLocalY));
+      }
+
+      const compression = clamp(wheel.restLengthM - distance, -travel * 0.4, travel);
+      const centre = this.chassis.getWorldCenter();
+      const cv = this.chassis.getLinearVelocity();
+      const omega = this.chassis.getAngularVelocity();
+      const rx = anchor.x - centre.x;
+      const ry = anchor.y - centre.y;
+      const vax = cv.x - omega * ry;
+      const vay = cv.y + omega * rx;
       const wv = wheel.body.getLinearVelocity();
       const rate = (vax - wv.x) * axis.x + (vay - wv.y) * axis.y;
 
-      let force = wheel.springK * compression - wheel.damperC * rate;
+      // Progressive rate near full compression: the last 25 % of travel is
+      // three times stiffer, which resists bottoming out without a hard stop.
+      const usage = clamp(compression / Math.max(0.02, travel), 0, 1);
+      const progressive = usage > 0.75 ? 1 + (usage - 0.75) * 12 : 1;
+      let force = wheel.springK * progressive * compression - wheel.damperC * rate;
+      force = clamp(force, -maxForce * 0.6, maxForce * 1.6);
 
-      const bump = compression - travel;
-      if (bump > 0) force += wheel.springK * 9 * bump;
-      const droop = -compression - travel * 0.35;
-      if (droop > 0) force -= wheel.springK * 6 * droop;
-
-      force = clamp(force, -wheel.springK * 0.3, wheel.springK * 0.8);
+      this.suspensionForceN[i] = force;
       wheel.springForceN = force;
-
-      this.chassis.applyForce(Vec2(axis.x * force, axis.y * force), anchor, true);
-      wheel.body.applyForce(Vec2(-axis.x * force, -axis.y * force), wheelCentre, true);
-    }
-
-    const staticLoad = (this.car.numbers.massKg * GRAVITY) / 2;
-    for (const w of this.wheels) {
-      if (!w.grounded) w.loadN = 0;
-      else w.loadN = clamp(Math.max(0, w.springForceN), 0, staticLoad * 4);
     }
   }
 

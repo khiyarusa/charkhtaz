@@ -1,88 +1,81 @@
-# Visual QA — 2026-11-12
+# QA · VISUAL · v0.2.0
 
-Real browser screenshots, produced by `scripts/screenshot.mjs` against the Vite
-dev server and saved in `docs/visual-qa/`.
+All screenshots are real captures of the running build. No mockups, no edited
+images. Capture harness: `tools/qa.mjs` (UI, race, AI, touch, pacing) and
+`tools/ghost-shot.mjs` (real ghost recording and replay).
 
-- Browser: Microsoft Edge (Chromium) via Playwright 1.65, headless.
-- Viewport: **1280 × 720**, DPR 1 (landscape phone-class layout).
-- Page errors during the run: **0**. Console errors: **0** (favicon 404 fixed).
-- Fonts: `document.fonts.check('800 64px Vazirmatn') === true`; the bundled
-  woff2 files load from the app origin, not a CDN.
+## Run metadata
 
-## Screens
+| Field | Value |
+| --- | --- |
+| Build | working tree at the v0.2.0 commit |
+| URL | `http://localhost:5173/` (Vite dev server) |
+| Browser | Microsoft Edge 157 headless (Chromium 157) |
+| Viewport | 1280 × 720, DPR 1 |
+| Console errors | 0 |
+| Screenshot dir | `docs/visual-qa/v0.2.0/screenshots/` |
+| Report | `docs/visual-qa/v0.2.0/report.json` |
 
-| File | State | What it proves |
+## Screenshot set
+
+| # | File | State |
 | --- | --- | --- |
-| `01-home.png` | Home | RTL layout, brand system, live car preview, mode cards |
-| `02-garage.png` | Garage | Three real cars, stat bars, selection state |
-| `03-garage-prado.png` | Garage, Prado selected | Detail panel updates, spec grid |
-| `04-tracks.png` | Track select | Six routes, biome chips, difficulty, profile sparklines |
-| `05-game-countdown.png` | Countdown | Start gantry, pedals, auto range D, HUD timer |
-| `06-game-driving.png` | Driving | Speed 77 km/h, gear, rpm, lane dashes, delineators |
-| `07-game-driving-2.png` | Driving | Camera follow, checkpoint flag, stable HUD |
-| `08-title.png` | Wordmark crop | Vazirmatn shaping, ZWNJ gap, amber accent |
-| `09-pause.png` | Pause | Modal, results tiles, RTL button order |
+| 1 | `01-home.png` | home, hero, next career event, selected car |
+| 2 | `02-profile.png` | driver profile, XP, achievements, collection |
+| 3 | `03-career.png` | career map, one event completed with a silver medal |
+| 4 | `04-garage.png` | garage grid, all eight cars |
+| 5 | `05-car-01 … 08.png` | each car's detail page with its own preview |
+| 6 | `06-upgrades.png` | upgrade screen, engine tab, live preview, stock comparison |
+| 7 | `07-upgrade-after.png` | after buying tier 1: credits changed, deltas shown |
+| 8 | `08-upgrade-{tires,suspension,differential,clutch}.png` | one screen per category |
+| 9 | `09-settings.png` | pedals, difficulty, audio, motion, debug |
+| 10 | `10-track-select.png` | quick-race track list with sparklines |
+| 11 | `11-hud-manual.png` | manual HUD, three pedals, countdown |
+| 12 | `12-hud-three-touch.png` | three simultaneous pointers on the pedals |
+| 13 | `13-hud-driving.png` | manual car moving, gear 1, speed and rpm live |
+| 14 | `14-pause.png` | pause modal |
+| 15 | `15-hud-automatic.png` | automatic car, clutch correctly hidden |
+| 16 | `16-race-ai.png` | race with opponents and standings |
+| 17 | `17-result.png` | results: win, time, position, reward, achievements |
+| 18 | `18-hud-time-trial.png` | time trial HUD |
+| 19 | `19-time-trial-result.png` | time trial result after a recorded run |
+| 20 | `20-ghost-replay.png` | translucent ghost ahead of the player |
+| 21 | `21-ghost-replay-late.png` | ghost later in the same run |
 
 ## Defects found and fixed in this pass
 
-1. **NaN physics on spawn** — a `WheelJoint` with `frequencyHz: 0` divides by
-   zero inside Planck's spring solver. Fixed with a negligible non-zero
-   frequency and a mass-based custom spring.
-2. **Chassis sat on its belly** — Planck sizes a wheel-joint spring from the
-   wheel body's mass, far too soft for a car. Replaced with the measured
-   spring/damper in `docs/VEHICLE_PHYSICS.md`.
-3. **Free axle oscillated 0 ↔ 6 rad/s** — the tyre slip curve's negative slope
-   past peak pumped energy into the wheel update. Added a positive damping floor
-   and a rolling solution for non-driven wheels.
-4. **Brakes lost half their force** — the free-wheel model relaxed the wheel back
-   to road speed *after* braking, cancelling it. Rewritten as a contact-patch
-   brake force capped by grip; ABS cars cap brake torque at `μNr`.
-5. **Automatic stalled during the countdown** — creep torque was folded into
-   converter capacity, so idle load exceeded idle torque. Creep is now a
-   wheel-side force and the converter is sized for 2 600 rpm stall.
-6. **Speedometer hidden under the pedals** — `inset-inline-start` resolves to the
-   right in RTL. Speed cluster is now physically bottom-left, `direction: ltr`.
-7. **Countdown invisible for the first second** — the label only updated when
-   `ceil(countdown)` changed. Initialised to «۳» at scene start.
-8. **Time read as a fraction** — the Persian decimal separator looks like a slash
-   at HUD size. Race time now uses a period (`۰۵.۴۰`).
-9. **Impassable obstacles** — 1 m boulders and a 1.1 m concrete block are walls in
-   a side view with no steering. Obstacle heights were reduced to 0.3–0.45 m so
-   momentum and throttle can clear them.
-10. **Flat, unreadable road** — added lane dashes, shoulder band, sand ripples,
-    mud puddles, gravel speckle and 18 m delineator posts.
+| Defect | Evidence | Fix |
+| --- | --- | --- |
+| Keyboard pedals never moved the car (holding W only stopped the spring) | HUD showed gear N and 0 km/h with W held | digital keys now ramp the pedal at 4.5–7 units/s |
+| Speedometer text overflowed its ring and clipped at the left edge | `11-hud-manual` in the previous run | compact speed panel: ring + unit/gear/rpm column, max-width, safe-area bottom |
+| Standings rows clipped their gap column | `09-race-ai` in the previous run | grid with `minmax(0,1fr)`, ellipsis, min/max width |
+| Garage detail canvas was 900 px wide inside a 595 px panel | `05-garage` in the previous run | preview canvas fits both axes, `width:100%` in CSS |
+| Hero wordmark showed a wide gap inside چرخ‌تاز | `01-home` in the previous run | single text run with a gradient clip instead of two spans |
+| Tail lamp floated above the boot on low cars | car detail screenshots | lamps anchored to the silhouette's nose/tail height |
+| Car hovered visually (bright road band under the tyres) | `11-hud-manual` | thinner crown line, darker road edge, per-tyre contact shadow |
+| Car art used generic `sedan/suv/sport` templates for the first three cars | roster test failed on `art.profile` | all eight cars now carry their own silhouette and equipment block |
+| Pumpkin mark looked like stock clip-art | brand review | flat five-lobe emblem with negative grooves, stem/leaf and road baseline |
+| Body box caught kerbs before the wheels could climb them | route probe stalled at every obstacle | raised, narrower body collider; chamfered block colliders; obstacle heights capped |
+| Cars fell through the terrain when inverted | route probe showed y = −1000 m | body collides with the ground again, so an inverted car rests on its roof |
+| Cars spun freely in the air and landed on the roof | AI route probe, pitch 3.4 → 7.4 rad | capped PD attitude assist while fewer than two wheels are grounded |
+| Automatic held first gear under wheelspin | physics trace | shift schedule reads driven-wheel speed and adds a wheelspin escape |
 
-## Full-route smoke drive
+## Iterations
 
-`scripts/smoke-drive.mjs` drives the Prado on «کمربندی جنوبی» with the throttle
-pedal held from the countdown. After the fixes below it reaches the finish:
+Every screen above was captured at least twice: once before the fix pass and once
+after. The final pass was run after the last physics change, so the HUD, results
+and ghost screenshots all show the shipped behaviour.
 
-```
-time 56.40 s · top speed 81 km/h · checkpoints 2/2 · damage 9 % · penalties +6 s
-results overlay shown with "رکورد جدید"
-```
+Two visual reviews of the brand mark were rejected before the current emblem was
+accepted (a gradient clip-art pumpkin and an over-scalloped silhouette). The
+accepted mark was checked at 512, 96 and 32 px.
 
-Two respawns were required by the run, hence the penalty. The route is
-completable; the automatic still spends too long in 1st under wheelspin and the
-suspension is bouncy after landings — both are tracked as handling issues, not
-as blockers.
+## Known visual limitations
 
-## Known gaps (not claimed as done)
-
-- Multi-touch was validated with Playwright pointer events, **not on a physical
-  Android device**. The emulator/device matrix is still pending.
-- No render interpolation; 120 Hz displays will see repeated frames.
-- Car silhouettes are recognisable body styles but not yet at the fidelity bar
-  in `ART_BIBLE.md` §8.
-- Damage is reported numerically but does not yet change handling or visuals.
-- No audio, AI opponents, ghost replay, career or obstacle-trial scoring yet.
-- Android APK has not been built on this machine (no Android SDK / JDK 21);
-  `.github/workflows/android.yml` is the build path.
-
-## Reproduce
-
-```bash
-npm ci
-npm run dev -- --port 5173
-node scripts/screenshot.mjs
-```
+- At 1280×720 the car is ~330 px long, so very fine trim (badges, small grille
+  slats) is only a few pixels. Model identity rests on silhouette, lamps, grille
+  style and stance rather than on decals.
+- Environment art is procedural. Biomes are distinguishable and surface detail is
+  readable, but they are not hand-painted backgrounds.
+- Physical Android rendering (device font metrics, safe areas, 120 Hz panels) is
+  **not** verified in this release.

@@ -1,164 +1,147 @@
-# Vehicle physics — CHARKHTAZ
+# VEHICLE PHYSICS · v0.2
 
-This document is the authority for how a car moves. If code and this document
-disagree, the code is wrong until this document is updated with evidence.
+Planck.js is the single physics authority. World units are metres; the renderer
+owns pixels. The simulation runs at a fixed 60 Hz step with a bounded accumulator
+(max 6 steps per frame) and renders an interpolated pose.
 
-## Units and axes
+## 1. Assembly
 
-- SI everywhere: metres, kilograms, seconds, newtons, newton-metres, radians.
-- World `+x` is forward (the direction the car faces), `+y` is up.
-- Positive wheel angular speed rolls the car forward.
-- Rendering converts metres to pixels; physics never sees pixels.
+- One dynamic chassis body (box fixture, `bullet: true`, angular damping 0.55).
+- Two dynamic wheel bodies on `WheelJoint`s. The joint motor is **off**: wheel
+  torque reaches the ground only through the tyre model.
+- The suspension is solved by `Vehicle`, not by the joint spring, because Planck
+  sizes a wheel-joint spring from the wheel's mass rather than the car's.
 
-## Time step
+### Collision filters
 
-- Fixed step **1/60 s**. `GameScene` accumulates real frame time and runs at most
-  six steps per frame; a longer stall drops accumulated time instead of
-  spiralling.
-- All forces are computed per fixed step. Nothing is scaled by frame rate.
-- The renderer draws the latest state; no interpolation yet (60 Hz physics on a
-  60 Hz display). This is a known gap for 120 Hz screens and is listed in
-  `docs/QA-VISUAL.md`.
+| Fixture | Category | Mask | Why |
+| --- | --- | --- | --- |
+| Ground (chains) | `0x0001` | all | terrain |
+| Chassis | `0x0002` | ground + obstacles | the body may rest on its roof, but its box is raised above the wheel tops so it cannot catch kerbs |
+| Wheel | `0x0004` | ground + obstacles | the only part that rolls on the road |
+| Obstacle | `0x0008` | all | rocks, logs, blocks, planks |
 
-## Bodies (Planck.js)
+The chassis fixture is `Box(0.94·halfLength, 0.58·halfHeight)` offset upward by
+`0.4·halfHeight`. Its lower edge sits above the wheel tops, so normal driving
+never drags the body, while an inverted car still lands on something solid.
 
-| Body | Shape | Notes |
+## 2. Suspension
+
+Per corner, from the car's corner mass:
+
+```
+ω  = 2π · suspensionFrequencyHz
+k  = cornerMass · ω²
+c  = 2 · dampingRatio · √(k · cornerMass)
+```
+
+Every step, `solveSuspension()` measures the distance from the chassis anchor to
+the wheel body along the suspension axis:
+
+- **Compression** = `restLength − distance`, clamped to `[−0.4·travel, travel]`.
+- The spring force is `k · compression − c · rate`, with a progressive rate (×3)
+  over the last 25 % of travel, capped at 5× the static corner load.
+- The force is applied to the **chassis only**, at the anchor.
+- **Bump stop:** if the wheel is closer than `restLength − travel`, the chassis's
+  closing velocity along the axis is projected out (velocity-level stop, no
+  teleport, no energy injection).
+- **Droop stop:** if the wheel is farther than `restLength + 0.4·travel`, the wheel
+  is pulled back to the limit and its outward velocity is removed.
+
+This replaced a force pair applied to both bodies, which was numerically unstable
+at 60 Hz (a 25 kg wheel against a 1.3 t chassis, with stops 6–9× stiffer than the
+base spring). The symptom was cars launching off small kerbs and oscillating after
+landings; `src/game/render-interpolation.test.ts` now asserts a 2 m drop settles
+with at most two rebounds.
+
+Tyre normal load is the solved spring force, clamped to 4× the static corner load,
+and is zero while the wheel is airborne.
+
+## 3. Tyres and surfaces
+
+Longitudinal force comes from a slip-ratio curve with a peak at ~0.16 slip. Each
+surface supplies `friction` and `rollingResistance`:
+
+| Surface | μ | Rolling |
 | --- | --- | --- |
-| Chassis | box `length × 0.56 × height` | single rigid body, carries the mass |
-| Front wheel | circle `r` | dynamic, `friction 0`, bullet |
-| Rear wheel | circle `r` | dynamic, `friction 0`, bullet |
+| asphalt dry | 0.95 | 0.014 |
+| asphalt wet | 0.68 | 0.017 |
+| dirt | 0.78 | 0.032 |
+| gravel | 0.62 | 0.045 |
+| sand | 0.48 | 0.085 |
+| mud | 0.36 | 0.11 |
+| rock | 0.86 | 0.026 |
+| wood | 0.72 | 0.030 |
 
-Wheels are attached with `WheelJoint` along the local vertical axis. The joint
-provides the axis constraint and free rotation; **the spring is ours**, because
-Planck sizes a `WheelJoint` spring from the wheel body's mass (a wheel, not a
-car) and a zero frequency makes its solver divide by zero. The joint therefore
-runs at a tiny non-zero frequency (`0.05 Hz`) purely to keep the solver finite.
+ABS cars cap commanded brake torque at the grip the tyre can hold; non-ABS cars
+can lock a wheel.
 
-### Suspension
-
-Per corner:
-
-```
-k = (mass/2 + wheelMass) · (2π f)²
-c = 2 ζ √(k · (mass/2 + wheelMass))
-F = k · compression − c · compressionRate
-```
-
-- `compression = restLength − distance(anchor, wheelCentre)` along the axis.
-- Forces are applied to the chassis at the anchor and to the wheel at its centre.
-- A bump stop multiplies `k` by 9 past full travel; a droop stop pulls the wheel
-  up past 35 % negative travel.
-- Force is clamped to `[−0.3k, 0.8k]` to keep landings finite.
-- Static compression is `g / (2πf)²` ≈ 4.5 cm for the Shahin, which is why the
-  car settles visibly when a run starts.
-
-Tyre normal load is the spring force at that corner, capped at four times the
-static axle load so a landing spike cannot invent infinite grip.
-
-## Tyres
-
-Longitudinal only — this is a side-view game and does not model lateral force.
-
-```
-κ = (ω·r − v) / max(|v|, 0.5)
-F = μ · N · sin(C · atan(B · κ)),  B = 10, C = 1.65
-```
-
-- Peak force exactly 1.0 × μN at κ ≈ 0.14; sliding plateau ≈ 0.52 × μN.
-- μ = surface friction × tyre grip × condition/upgrade multipliers.
-- The force is applied at the contact point along the ground tangent, so it
-  pitches the chassis and transfers load like a real contact patch.
-- The wheel update is semi-implicit with a **positive damping floor** past the
-  slip peak. Using the true negative slope there pumps energy into the wheel and
-  made the free axle oscillate between 0 and 6 rad/s.
-- Free (non-driven) wheels are solved as rolling: they track road speed and a
-  brake becomes a contact-patch force capped by grip. Integrating the stiff
-  wheel/road coupling explicitly cancelled the brake within one step.
-
-### ABS
-
-Cars with `hasAbs`:
-
-1. command brake torque is capped at `μNr` per wheel (never more than grip);
-2. a slip regulator bleeds residual torque when |κ| exceeds ~0.16.
-
-Non-ABS cars can lock: the wheel is clamped at zero speed and the tyre returns
-the sliding force for κ = −1. That is why the Shahin (no ABS) skids and the
-Prado/BMW stop harder on loose surfaces.
-
-## Torque path (single authority)
+## 4. Torque path
 
 ```
 engine torque
-  → clutch (manual) or torque converter (automatic)
+  → clutch (manual, bite curve + capacity) or torque converter (automatic)
   → gearbox ratio × final drive
-  → open differential (torque split evenly across driven wheels)
-  → tyre longitudinal force
-  → chassis at the contact patch
+  → open differential (per driven wheel)
+  → tyre longitudinal force at the contact patch
+  → chassis
 ```
 
-Nothing else applies drive torque. The Planck joint motor is disabled; wheel
-bodies receive angular velocity from the drivetrain model, not from contacts
-(their fixture friction is zero to avoid counting longitudinal force twice).
+Manual: implicit clutch solve with Coulomb saturation; shifting is refused unless
+the clutch pedal is past the gearbox threshold.
 
-### Manual
+Automatic: pump torque rises with engine speed squared and collapses as the speed
+ratio approaches 1; the stator multiplies torque up to `converterStallRatio`; the
+lock-up clutch closes above `converterLockRpm` and 0.85 speed ratio. The shift
+schedule reads the **driven-wheel** speed (the real gearbox input), not the road
+speed, and adds a wheelspin escape (short-shift when slip > 0.3 and the engine is
+above 84 % of its shift point), limiter protection and a kickdown with a
+predicted-rpm safety check. This is the documented fix for the automatic that
+used to hold first gear under wheelspin.
 
-- Clutch capacity follows a smoothstep bite curve between `biteStart` and
-  `biteEnd`; transmitted torque saturates at capacity.
-- Engine, clutch and wheels are integrated together at eight sub-steps with an
-  implicit viscous solve inside the bite zone, so lock-up is stable at 60 Hz.
-- Gear changes require clutch pedal ≥ `clutchThreshold`; otherwise the box
-  refuses with `reason: 'clutch'`.
-- A downshift that would drag the engine past redline is allowed but flagged
-  `overrev`; mechanical damage accumulates above the grace band. Fuel cut does
-  not protect an engine being driven by the wheels.
+CVT cars (Corolla E210) use the same converter model with `kind: 'cvt'`; ratio
+kits are refused on them by the upgrade compatibility matrix.
 
-### Automatic
+## 5. Attitude assist
 
-- Torque converter pump torque is `C·ω²`, with `C` sized so full-throttle stall
-  is ≈ 2 600 rpm for that engine's peak torque.
-- Stator multiplication decays from `converterStallRatio` to 1 as the speed
-  ratio approaches 0.85; above `converterLockRpm` the lock-up clutch closes.
-- The shift schedule is throttle-aware (upshift threshold falls with part
-  throttle; kickdown above `kickdownThrottle`), with a cooldown to stop hunting.
-- Creep is a wheel-side torque at closed throttle below 2.2 m/s, **not** extra
-  pump capacity — including it in capacity stalled the engine at idle.
-- `R / N / D` are driver ranges; D selects 1st and the schedule does the rest.
+A 2D side-view car has no steering axis, so a free rigid body ends most jumps on
+its roof. While fewer than two wheels are grounded, a capped PD torque levels the
+car and stops wheelies:
 
-## Surfaces
+```
+error  = shortestSignedAngle(−angle) with a 0.5 rad deadband
+torque = I · (2.8 · error − 1.9 · ω),  |torque| ≤ 7·I,  |ω| ≤ 5 rad/s
+```
 
-`asphalt-dry`, `asphalt-wet`, `dirt`, `gravel`, `sand`, `mud`, `rock`, `wood`.
-Each has a friction coefficient and rolling resistance in
-`src/vehicles/profiles.ts`. The terrain builder tags each contiguous ground run
-with one surface; the contact manifold supplies the surface to the tyre model.
+It is explicitly a game-feel aid, not a physical claim. On the ground the
+suspension and tyres own the attitude.
 
-## Damage and recovery
+## 6. Obstacle passability
 
-- Impact severity is measured from relative normal velocity at `begin-contact`
-  (above 5 m/s), accumulating body damage and camera shake.
-- Damage currently reduces the reported body condition; it does **not** yet
-  change handling or visuals. That is deliberate: an untested mechanic is worse
-  than none, and this is tracked as a V1 gap.
-- Respawn returns the car to the last checkpoint, restarts the engine, selects
-  1st, and adds a 3 s penalty. Falling below the terrain bounds, flipping for
-  2.2 s, or being stuck for 12 s with throttle applied triggers it.
+Because the wheels are tied to the chassis horizontally, an obstacle taller than
+the wheel radius is a wall, not a bump. The authors therefore cap obstacle heights
+in `TrackBuilder`:
 
-## Honest 2D limitations
+- rock ≤ 0.24 m, tyre stack ≤ 0.24 m, block ≤ 0.22 m, log radius ≤ 0.22 m;
+- blocks get chamfered top edges in collision so a tyre can ride up;
+- `gap()` authors a shallow ditch (≤ 0.85 m deep) instead of a bottomless hole.
 
-A side view cannot represent lateral cornering, steering into the screen, yaw,
-four independent contact patches, or a full 3D chassis. It *does* represent
-longitudinal acceleration, braking, wheelspin, lock-up, suspension travel,
-pitch, slopes, jumps, landings and collisions. The game design is built around
-what the simulation can defend; no marketing claim should say otherwise.
+This keeps every route completable, which `src/tracks/completion.test.ts` verifies
+by driving all six routes with the autonomous controller and the scene's recovery
+rules.
 
-## Tuning constants worth knowing
+## 7. Fixed step and interpolation
 
-| Constant | Value | Why |
-| --- | --- | --- |
-| `B`, `C` (tyre) | 10, 1.65 | peak at κ ≈ 0.14, slide ≈ 0.52 |
-| slip speed floor | 0.5 m/s | keeps κ finite at standstill |
-| damping slope floor | 0.45 | stops wheel-update oscillation |
-| suspension force clamp | −0.3k … 0.8k | finite landings |
-| load cap | 4 × static | no infinite grip on spikes |
-| converter reference stall | 2 600 rpm | idle pump torque < idle torque |
-| respawn penalty | 3 s | discourages reset-spam |
+`GameScene.update` accumulates real time, runs 0…6 fixed steps, and stores
+`alpha = accumulator / dt`. `Vehicle.renderPose(alpha)` interpolates chassis and
+wheel transforms between the previous and current physics poses. The camera
+follows the same interpolated pose, so a 120 Hz display does not show a 60 Hz
+camera stepping under a smooth car. Interpolation never writes back into physics.
+
+## 8. Known limits
+
+- No lateral dynamics, steering, yaw, tyre temperature or load sensitivity beyond
+  the normal-load term.
+- Damage is a scalar with staged visuals, not deformable geometry.
+- Obstacles are static; there is no debris simulation.
+- The attitude assist means a deliberate mid-air roll is not possible.

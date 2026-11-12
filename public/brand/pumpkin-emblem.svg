@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="نشان چرخ‌تاز">
+  <defs>
+    <clipPath id="badgeClip">
+      <rect x="0" y="0" width="512" height="512" rx="112"/>
+    </clipPath>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffc074"/>
+      <stop offset="0.42" stop-color="#f0902a"/>
+      <stop offset="1" stop-color="#d9761a"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#badgeClip)">
+    <rect x="0" y="0" width="512" height="512" fill="#101318"/>
+    <rect x="26" y="26" width="460" height="460" rx="90" fill="none" stroke="#d9a441" stroke-opacity="0.2" stroke-width="3"/>
+
+    <!-- Pumpkin: soft scallops, no cusps -->
+    <path fill="url(#rim)" stroke="#101318" stroke-width="9" stroke-linejoin="round" d="
+      M100 266
+      C100 212 122 180 152 172
+      C170 167 184 176 196 178
+      C210 180 218 160 230 155
+      C242 150 248 164 256 164
+      C264 164 270 150 282 155
+      C294 160 302 180 316 178
+      C328 176 342 167 360 172
+      C390 180 412 212 412 266
+      C412 320 390 352 360 360
+      C342 365 328 356 316 354
+      C302 352 294 372 282 377
+      C270 382 264 368 256 368
+      C248 368 242 382 230 377
+      C218 372 210 352 196 354
+      C184 356 170 365 152 360
+      C122 352 100 320 100 266 Z"/>
+
+    <!-- Rim light, top-left -->
+    <path fill="#ffd79a" opacity="0.3" d="
+      M152 172 C170 167 184 176 196 178 C210 180 218 160 230 155
+      C242 150 248 164 256 164 C252 174 248 186 246 198
+      C232 192 214 190 198 194 C178 199 164 206 154 214
+      C152 200 151 185 152 172 Z"/>
+
+    <!-- Grooves -->
+    <g fill="none" stroke="#b8560f" stroke-linecap="round" stroke-width="8">
+      <path d="M232 168 C226 208 226 328 232 362"/>
+      <path d="M280 168 C286 208 286 328 280 362"/>
+      <path d="M192 186 C180 222 180 312 192 348"/>
+      <path d="M320 186 C332 222 332 312 320 348"/>
+    </g>
+
+    <!-- Stem and leaf -->
+    <path fill="#3f6b32" d="M243 168 C241 142 247 122 261 110 C272 122 276 144 272 168 Z"/>
+    <path fill="#5f9247" d="M261 112 C279 102 299 104 313 116 C299 130 281 133 263 126 Z"/>
+    <path fill="#101318" opacity="0.22" d="M261 112 C279 102 299 104 313 116 C305 120 295 121 285 121 Z"/>
+
+    <!-- Road baseline -->
+    <g>
+      <rect x="112" y="424" width="288" height="12" rx="6" fill="#d9a441" opacity="0.2"/>
+      <rect x="128" y="424" width="56" height="12" rx="6" fill="#d9a441"/>
+      <rect x="228" y="424" width="56" height="12" rx="6" fill="#d9a441"/>
+      <rect x="328" y="424" width="56" height="12" rx="6" fill="#d9a441"/>
+    </g>
+  </g>
+</svg>

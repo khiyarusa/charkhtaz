@@ -10,9 +10,78 @@
     <meta name="color-scheme" content="dark" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>چرخ‌تاز CHARKHTAZ</title>
+    <link rel="apple-touch-icon" href="/brand/pumpkin-192.png" />
+    <title>چرخ‌تاز · CHARKHTAZ</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #0d0f13;
+        color: #f2ede1;
+        font-family: Vazirmatn, system-ui, sans-serif;
+      }
+
+      #splash {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 14px;
+        background: radial-gradient(60% 50% at 50% 45%, #1a1f27 0%, #0d0f13 70%);
+        z-index: 999;
+        transition: opacity 0.28s ease;
+      }
+
+      #splash.is-done {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #splash img {
+        width: 128px;
+        height: 128px;
+        animation: splash-pulse 2.2s ease-in-out infinite;
+      }
+
+      #splash strong {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      #splash span {
+        font-size: 11px;
+        letter-spacing: 0.32em;
+        color: #d9a441;
+      }
+
+      @keyframes splash-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: drop-shadow(0 10px 26px rgba(217, 164, 65, 0.18));
+        }
+        50% {
+          transform: scale(1.035);
+          filter: drop-shadow(0 14px 34px rgba(217, 164, 65, 0.32));
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #splash img {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" role="status" aria-live="polite">
+      <img src="/brand/pumpkin-emblem.svg" alt="" />
+      <strong>چرخ‌تاز</strong>
+      <span>CHARKHTAZ</span>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

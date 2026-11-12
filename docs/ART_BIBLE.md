@@ -1,106 +1,117 @@
-# Art bible — CHARKHTAZ
+# ART BIBLE · CHARKHTAZ v0.2
 
-## 1. Brand
+The brand is a **pumpkin**. It supersedes the earlier wheel-and-road mark. Every
+screen, the app icon, the splash, documentation and marketing material use the
+same family; no second identity ships.
 
-**چرخ‌تاز / CHARKHTAZ** — a confident, mechanical, Iranian-rooted racing brand.
-The name is a working brand: trademark, store name and commercial clearance are
-**not** verified and must be reviewed before any commercial release.
+## 1. The mark
 
-- Persian wordmark: «چرخ‌تاز» set in Vazirmatn ExtraBold, never rasterised text.
-- Latin lockup: `CHARKHTAZ · RACE · SHIFT · CONQUER` with wide tracking.
-- Motif: wheel + road dashes, drawn geometrically. The favicon and launcher mark
-  use the same circle-and-spokes construction.
-- Voice: precise, dry, confident. No exclamation-mark marketing copy.
+The emblem is an original vector construction: a five-lobe pumpkin with a stem and
+leaf, seated above a dashed road baseline, inside a graphite rounded badge.
 
-## 2. Palette
+| Property | Value |
+| --- | --- |
+| Badge | 512 × 512, corner radius 112, fill `#101318` |
+| Inner ring | `#d9a441` at 20 % |
+| Pumpkin body | vertical gradient `#ffc074 → #f0902a → #d9761a` |
+| Grooves | `#b8560f` at 85 %, 8 px |
+| Outline | `#101318`, 9 px |
+| Stem | `#3f6b32`, leaf `#5f9247` |
+| Road dashes | `#d9a441`, 12 px high, radius 6 |
+
+Why the road baseline: it turns a vegetable silhouette into a racing mark without
+adding a second object. Remove it and the mark reads as a Halloween sticker.
+
+Legibility rules:
+
+- At 32 px the mark must still read as a pumpkin with a stem. Grooves may
+  disappear; the silhouette, stem and baseline may not.
+- Never place the badge on a background within 12 % of its own value; use the
+  light variant instead.
+- Never recolour the pumpkin outside the palette below. Never use an emoji.
+
+## 2. Files
+
+| File | Use |
+| --- | --- |
+| `public/brand/pumpkin-emblem.svg` | primary badge (app, header, splash) |
+| `public/brand/pumpkin-emblem-light.svg` | light surfaces |
+| `public/brand/pumpkin-emblem-mono.svg` | single-colour, `currentColor` |
+| `public/brand/logo-horizontal.svg` | emblem + Persian wordmark + Latin line |
+| `public/brand/logo-horizontal-light.svg` | same on light ground |
+| `public/brand/logo-stacked.svg` | stacked lockup |
+| `public/brand/logo-stacked-light.svg` | stacked on light ground |
+| `public/brand/pumpkin-{512,192,96,48,32}.png` | raster exports |
+| `public/favicon.svg` | the badge, 64 px |
+
+The lockups embed Vazirmatn ExtraBold as a data URI so the Persian wordmark keeps
+its shaping when the file is opened outside the app. The Latin line is
+letter-spaced caps (0.12 em) and always sits under the Persian word. The wordmark
+is `چرخ‌تاز` — one word with a ZWNJ, never split into two spans for colour; use a
+gradient clip instead (splitting breaks shaping and opens a visible gap).
+
+## 3. Palette
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| graphite | `#0d0f13` | page background |
-| panel | `#171b21` | cards, HUD plates |
-| ink | `#f2efe6` | primary text |
-| muted | `#98a0aa` | secondary text |
-| amber | `#d9a441` | accent, primary action, throttle |
-| red | `#b6462f` | brake, danger, taillights |
-| green | `#2f7d5b` | clutch, start banner |
-| asphalt | `#3c4045` | road body |
-| sand | `#c9a06a` | desert ground |
-| mud | `#3f3224` | forest ground |
+| graphite-900 | `#0d0f13` | page ground |
+| graphite-800 | `#111419` | panels |
+| graphite-700 | `#1b2027` | raised panels |
+| pumpkin | `#f0902a` | brand, primary action |
+| amber | `#d9a441` | accent, medals, focus |
+| amber-soft | `#f0c785` | text on dark |
+| ink | `#f2ede1` | primary text |
+| muted | `#a9a294` | secondary text |
+| danger | `#c4553f` | errors, damage |
 
-Biome palettes live in `src/render/palettes.ts`; they are the only place raw
-scene colours should be added.
+Surface palettes live in `src/render/palettes.ts`; each biome overrides sky,
+ridge and haze tones but keeps the brand colours for UI.
 
-## 3. Camera and scale
+## 4. Vehicles
 
-- Strict side elevation. No perspective, no 3/4 views, no 3D.
-- Cars are drawn from the same side and the same scale in menus and gameplay.
-- World is metres; the renderer picks **34–68 px/m** from viewport height
-  (≈ 12.5 m visible vertically on a 720 px landscape screen).
-- Camera looks slightly ahead of the car (up to 9 m) and zooms out ~12 % at top
-  speed. Cars sit around 56 % of screen height.
-- Parallax layers: skyline/ridges 0.10–0.26, treeline 0.32, near scenery 0.48.
-  The road is the only layer at 1.0.
+Each car is drawn from its **own** side profile and equipment block
+(`CarArt.profile`, `CarArt.detail`). There is no shared body template: the
+silhouette, cabin, lamps, grille, cladding and spoiler are per model.
 
-## 4. Vehicle art rules
+Rules:
 
-- Wheel centres are **physical**: the renderer reads the wheel body positions and
-  draws each wheel there, then cuts matching arches out of the shell with an
-  even-odd fill. Wheels can never float or drift from the chassis.
-- Body silhouette is built from a per-kind profile (`sedan`, `suv`, `sport`) in
-  normalised `u` (length) and `v` (sill → roof) coordinates. Proportions come
-  from the real car's length/height/wheelbase, not from a generic template.
-- Layers: paint gradient, shoulder highlight, glass with pillar, door seams,
-  handles, mirror, head/tail lights, grille, plate, bumper, fender flare,
-  running board, roof rails. No manufacturer logos.
-- Wheels: tyre → brake disc → rim → spokes → hub. Rotation is the simulated
-  wheel angle, so a spinning wheel reads correctly in a screenshot.
-- Palette per car comes from `CarArt` so a new car only needs data, not code.
+- Wheel centres come from the physics wheel bodies, never from a fixed offset.
+  Wheels must sit inside their arches at rest, full compression, full droop and in
+  the air.
+- Wheel rotation is the physics angle. Tread blocks exist so rotation is visible.
+- Glasshouse is derived from the roofline above the belt line, so a hatchback gets
+  a tall rear screen and a roadster a short one.
+- Lamps are anchored to the actual nose/tail height of the silhouette, never to a
+  constant belt line (that mismatch used to leave a tail lamp floating over the
+  boot).
+- Damage is staged: scratches → dents → cracked screen and broken lamp → hanging
+  bumper and panel deformation. No blur or dark overlay is used to hide a defect.
+- Paint and rim options change the same drawing; the garage preview and the
+  in-game sprite use the same function.
 
-## 5. Environment rules
+## 5. Environment
 
-- Terrain is drawn from the **same polyline** that Planck collides with; there
-  are no invisible walls and no decorative ground that differs from collision.
-- Surface identity is readable at a glance: asphalt has lane dashes, sand has
-  ripples, mud has dark puddles, gravel/dirt have speckle, rock has grain.
-- Delineator posts every 18 m give a constant speed cue; checkpoints are amber
-  flags; start and finish are gantries with Persian text.
-- Props are deterministic (`hash01`) so a screenshot is reproducible.
+- Ground art and collision come from the same polyline. A decorative edge that
+  disagrees with the collision surface is a bug.
+- Each surface has a readable treatment: asphalt grain and lane paint, wet
+  reflections, sand ripples, mud sheen and puddles, gravel stones, rock strata,
+  wood planks and nails.
+- Parallax layers: far ridge/skyline, mid layer, near layer, then haze. Rates
+  differ by depth; no layer may scroll with the road.
+- Contact shadows: a soft body shadow plus a darker patch under each tyre.
 
-## 6. UI rules
+## 6. UI
 
-- Genuine RTL (`dir="rtl"`), Vazirmatn bundled locally in five weights.
-- Persian digits everywhere; Latin only for units/model names.
-- Minimum touch target 44 px; the three pedal sliders are 74 × 230 px by default
-  and scale 0.75–1.35.
-- HUD hierarchy: timer top centre, pause top corner, speed + gear bottom left,
-  pedals bottom right (switchable handedness), gear selector bottom centre.
-- No text baked into images; every label is real DOM or canvas text with the
-  bundled font.
+- Dark graphite ground, amber accents, one rounded panel language, 14–18 px radii.
+- Touch targets ≥ 44 px effective. Pedals are ≥ 64 px wide at default scale.
+- Motion is short (≤ 220 ms) and never blocks input; `prefers-reduced-motion` and
+  the in-app "کاهش حرکت" setting disable non-essential animation.
+- Typography: Vazirmatn only. Persian digits everywhere except model names and
+  technical notation.
 
-## 7. Asset status (honest)
+## 7. Acceptance
 
-| Asset family | Status |
-| --- | --- |
-| Logo / favicon | Geometric SVG mark — done |
-| Cars | Procedural layered 2D art — playable, silhouette still approximate |
-| Terrain / parallax | Procedural — done for 4 biomes |
-| Obstacles | Procedural rock, log, tyre stack, plank, concrete — done |
-| Particles | Dust, smoke, mud, sparks — done |
-| UI | Persian RTL design system — done |
-| Audio | **Not implemented** |
-| Raster/atlas art pipeline | **Not implemented** — no external sprites are shipped |
-
-Any future raster asset must be original or licensed for redistribution, with
-provenance recorded in `ASSET_LICENSES.md`. Copyrighted press photos may be used
-as internal reference only, never committed or shipped.
-
-## 8. Acceptance criteria
-
-A car asset is acceptable when:
-
-1. wheelbase, overall length and height match the data sheet within 3 %;
-2. wheels sit in their arches at rest and through full suspension travel;
-3. the silhouette is identifiable as the correct body style in a 250 px-wide
-   screenshot;
-4. palette, outline weight and lighting match the rest of the fleet;
-5. it renders at 60 fps on the target device with the full scene.
+A change is visually accepted only with a real screenshot at 1280 × 720 and at a
+phone landscape viewport (2340 × 1080), inspected for clipping, alignment,
+contact with the ground and colour consistency. "It looks fine in code" is not
+acceptance.
