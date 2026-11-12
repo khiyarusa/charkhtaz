@@ -9,11 +9,12 @@ throttle, brake and clutch — as the core control mechanic.
 
 Canonical repository: `github.com/khiyarusa/charkhtaz` · branch `main`.
 
-> **Status: v0.2.0 — playable, feature-complete for the V1 scope, not store-ready.**
-> Eight cars, six routes, four biomes, career, AI opponents, ghost replay,
-> obstacle-trial medals, upgrades that change the simulation, procedural audio and
-> persistent damage are implemented and covered by tests. Device-level Android
-> verification is **not** done in this release; see [Status](#status).
+> **Status: v0.3.0 — vehicle-art overhaul, playable, not store-ready.**
+> Eight cars now use independent, measured side-elevation blueprints
+> (`src/vehicles/art/`) instead of category templates, drawn by one layered
+> renderer in every screen. Career, AI, ghost, trials, upgrades, audio, damage and
+> saves are unchanged and tested. Device-level Android verification is still
+> **not** done; see [Status](#status).
 
 ## Quick start
 
@@ -61,11 +62,12 @@ Automatic cars use R / N / D and a torque-converter (or CVT) model with lock-up.
   path (`docs/VEHICLE_PHYSICS.md`).
 - **Surfaces** — dry/wet asphalt, dirt, gravel, sand, mud, rock, wood; friction
   and rolling resistance differ and change braking and traction.
-- **Cars** — eight models, each with its own silhouette, equipment block,
-  engine, gearbox and drivetrain: Saipa Shahin 1.5T, Peugeot 206 Type 2,
-  IKCO Tara, Renault Tondar 90, Toyota Corolla E210, BMW 320i G20, Toyota Land
-  Cruiser Prado 150, Mazda MX-5 ND. Data and confidence in
-  [`docs/VEHICLE_DATA_SOURCES.md`](docs/VEHICLE_DATA_SOURCES.md).
+- **Cars** — eight models, each with its own measured side-elevation blueprint
+  (outline, glasshouse, lamps, grille, door cuts, trim and wheel spec): Saipa
+  Shahin 1.5T, Peugeot 206 Type 2, IKCO Tara, Renault Tondar 90, Toyota Corolla
+  E210, BMW 320i G20, Toyota Land Cruiser Prado 150, Mazda MX-5 ND. Data and
+  confidence in [`docs/VEHICLE_DATA_SOURCES.md`](docs/VEHICLE_DATA_SOURCES.md) and
+  [`docs/vehicle-art/VEHICLE_REFERENCE_LEDGER.md`](docs/vehicle-art/VEHICLE_REFERENCE_LEDGER.md).
 - **Routes** — six data-driven tracks across mountain, desert, forest and urban
   biomes, with ramps, whoops, boulders, logs, tyre stacks and planks.
 - **Modes** — quick race (AI opponents), time trial (best-run ghost), obstacle

@@ -1,6 +1,7 @@
 import type { TrackDefinition, Vec2Like } from '../tracks/types';
 import { BIOME_PALETTES, SURFACE_LOOK, type BiomePalette } from './palettes';
 import { drawCarBody, drawCarShadow, drawWheel } from './vehicle-art';
+import { blueprintFor } from '../vehicles/art';
 import type { Vehicle } from '../physics/vehicle';
 import type { ResolvedCar } from '../vehicles/profiles';
 import type { GhostPose } from '../racing/ghost';
@@ -1042,6 +1043,7 @@ export class Renderer {
           : vehicle.car.cosmetics.rims === 'sport'
             ? 'rugged'
             : 'mesh',
+        blueprint: blueprintFor(vehicle.car.profile.id).wheel,
         braking: tele.brake > 0.15,
       });
     }
@@ -1086,6 +1088,7 @@ export class Renderer {
         index: i === 0 ? 0 : 1,
         slip: 0,
         rimStyle: ghost.car.profile.art.rimStyle,
+        blueprint: blueprintFor(ghost.car.profile.id).wheel,
       });
     }
     ctx.translate(this.sx(pose.x, cam), this.sy(pose.y, cam));

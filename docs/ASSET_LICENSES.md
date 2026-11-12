@@ -29,6 +29,11 @@ All vehicle, environment, obstacle, effect and UI artwork is drawn at runtime by
 `src/render/*` from data in `src/vehicles/*` and `src/tracks/*`. There are no
 bitmap sprites, no traced press photographs and no manufacturer logos.
 
+**Vehicle blueprints (Round 3).** `src/vehicles/art/*` is original project code and
+authored geometry. Proportions were derived from the public sources recorded in
+`docs/vehicle-art/research/*.md`; those pages are reference-only and no image from
+them is shipped. The blueprints are not traced from any photograph.
+
 Vehicle names are factual identifiers. No endorsement is implied.
 
 ## Audio

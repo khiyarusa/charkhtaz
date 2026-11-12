@@ -70,6 +70,7 @@ import { GameAudio } from '../audio';
 import { faFixed, faGroup, faNum, formatTime, gearLabel } from '../core/format';
 import { clamp01 } from '../core/math';
 import { drawCarBody, drawWheel } from '../render/vehicle-art';
+import { blueprintFor } from '../vehicles/art';
 import { BIOME_PALETTES } from '../render/palettes';
 import { GAME_VERSION } from '../core/build-info';
 
@@ -1507,6 +1508,7 @@ export class App {
         index: 1,
         slip: 0,
         rimStyle,
+        blueprint: blueprintFor(resolved.profile.id).wheel,
       });
     }
     drawCarBody(ctx, resolved, ppm, wheels, resolved.condition.body < 0.999 ? 1 - resolved.condition.body : 0, {

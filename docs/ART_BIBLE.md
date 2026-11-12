@@ -69,25 +69,35 @@ ridge and haze tones but keeps the brand colours for UI.
 
 ## 4. Vehicles
 
-Each car is drawn from its **own** side profile and equipment block
-(`CarArt.profile`, `CarArt.detail`). There is no shared body template: the
-silhouette, cabin, lamps, grille, cladding and spoiler are per model.
+Each car is drawn from its **own** authored blueprint (`src/vehicles/art/blueprints.ts`):
+body outline, glasshouse, lamps, grille, door cuts, character lines, trim and
+wheel spec, all in metres and derived from the published dimensions in
+`docs/vehicle-art/VEHICLE_REFERENCE_LEDGER.md`. There is no shared body template
+and no category fallback.
 
 Rules:
 
 - Wheel centres come from the physics wheel bodies, never from a fixed offset.
   Wheels must sit inside their arches at rest, full compression, full droop and in
   the air.
-- Wheel rotation is the physics angle. Tread blocks exist so rotation is visible.
-- Glasshouse is derived from the roofline above the belt line, so a hatchback gets
-  a tall rear screen and a roadster a short one.
-- Lamps are anchored to the actual nose/tail height of the silhouette, never to a
-  constant belt line (that mismatch used to leave a tail lamp floating over the
-  boot).
+- The body is **not** centred between the axles: front and rear overhangs differ
+  per model and `bodyShiftM` places the shell around the real axle midpoint.
+- Wheel rotation is the physics angle. Tread blocks exist so rotation is visible;
+  each model has its own rim style, spoke count and sidewall ratio.
+- The glasshouse is authored per car, not derived from a category shape, so a
+  hatchback gets a tall rear screen and a roadster a short one.
+- Lamps are anchored to the actual nose/tail height of the silhouette and clipped
+  to the shell, so no lamp, plate or bumper can float outside the body.
 - Damage is staged: scratches → dents → cracked screen and broken lamp → hanging
   bumper and panel deformation. No blur or dark overlay is used to hide a defect.
 - Paint and rim options change the same drawing; the garage preview and the
   in-game sprite use the same function.
+
+The vehicle-art pipeline, validation gates and known limits are documented in
+[`vehicle-art/ART_PIPELINE.md`](vehicle-art/ART_PIPELINE.md) and
+[`vehicle-art/QA_REPORT.md`](vehicle-art/QA_REPORT.md). The current standard is
+**authored vector illustration**, not hand-painted raster sprites; that limit is
+stated openly rather than presented as a finished sprite family.
 
 ## 5. Environment
 
