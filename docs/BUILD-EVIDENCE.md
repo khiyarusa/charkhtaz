@@ -29,6 +29,17 @@ dist/assets/index-*.js          405.31 kB │ gzip: 106.48 kB
 | Android launcher icons | regenerated for mdpi…xxxhdpi from the SVG master |
 | Secret scan | no keystore, `.env`, token or password in the tree |
 
+## GitHub Actions
+
+| Workflow | Commit | Result | URL |
+| --- | --- | --- | --- |
+| web | `573a6aa` | success | https://github.com/khiyarusa/charkhtaz/actions/runs/43295955154 |
+| android (manual dispatch) | `573a6aa` | success | https://github.com/khiyarusa/charkhtaz/actions/runs/43296258729 |
+
+The Android job ran `npm ci`, `npm test`, `npm run build`, `npx cap sync android`
+and `./gradlew assembleDebug bundleRelease`, and uploaded `android-build`
+(`app-debug.apk` + unsigned `app-release.aab`).
+
 ## Android
 
 - Workflow: `.github/workflows/android.yml` — triggered by a `v*` tag or manually.
