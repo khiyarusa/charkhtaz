@@ -28,32 +28,36 @@ idle, braking stability).
 | 43250710899 | tag `v0.1.0` | **failure** — `android-actions/setup-android@v3` called `sdkmanager tools`, which no longer exists |
 | [43251094909](https://github.com/khiyarusa/charkhtaz/actions/runs/43251094909) | manual dispatch | **success** — all build steps through APK/AAB assembly and artifact upload |
 | [43251837928](https://github.com/khiyarusa/charkhtaz/actions/runs/43251837928) | tag `v0.1.1` | **success** — build + GitHub release publish |
+| [43255074396](https://github.com/khiyarusa/charkhtaz/actions/runs/43255074396) | tag `v0.1.3` | **success** — build + release with the playable respawn/shift fixes |
 
 Environment in CI: Ubuntu runner, Node 22, Temurin JDK 21, Android SDK
 platform 36 / build-tools 36.0.0, Capacitor 8.
 
-### Published assets (v0.1.1)
+### Published assets (v0.1.3)
 
 | Asset | Size | Meaning |
 | --- | --- | --- |
-| `app-debug.apk` | 4,654,373 bytes | debug-signed, installable |
-| `app-release.aab` | 3,451,802 bytes | **unsigned**, not Play-uploadable until signed |
+| `app-debug.apk` | 4,379,693 bytes | debug-signed, installable |
+| `app-release.aab` | 3,239,259 bytes | **unsigned**, not Play-uploadable until signed |
 
-Release: <https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.1>
+Release: <https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.3>
 
 The APK was downloaded and opened as a zip. It contains:
 
 ```
 assets/public/index.html
-assets/public/assets/index-BqzoC2nO.js     308,664 bytes
+assets/public/assets/index-ChxOzdcY.js     308,985 bytes
 assets/public/assets/index-DJ0u00w2.css     20,710 bytes
-assets/public/assets/fonts/Vazirmatn-*.woff2
+assets/public/assets/fonts/Vazirmatn-*.woff2  (5 weights)
 AndroidManifest.xml
+
+No `.map` files are present.
 ```
 
-That is the whole game, offline, including the Persian font. `v0.1.2` rebuilds
-the same package without the 1,019,644-byte JavaScript source map that `v0.1.1`
-still carried.
+That is the whole game, offline, including the Persian font. From `v0.1.2`
+onwards the 1,019,644-byte JavaScript source map that `v0.1.1` carried is no
+longer packaged. `v0.1.3` additionally contains the respawn, gearbox and
+obstacle fixes verified by `scripts/smoke-drive.mjs`.
 
 ## What the CI does **not** prove
 
