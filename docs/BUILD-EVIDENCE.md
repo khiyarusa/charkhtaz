@@ -35,26 +35,43 @@ dist/assets/index-*.js          405.31 kB │ gzip: 106.48 kB
 | --- | --- | --- | --- |
 | web | `573a6aa` | success | https://github.com/khiyarusa/charkhtaz/actions/runs/43295955154 |
 | android (manual dispatch) | `573a6aa` | success | https://github.com/khiyarusa/charkhtaz/actions/runs/43296258729 |
+| web (tag `v0.2.0`) | `a9f84d4` | success | https://github.com/khiyarusa/charkhtaz/actions/runs/43296891238 |
+| android + release (tag `v0.2.0`) | `a9f84d4` | success | https://github.com/khiyarusa/charkhtaz/actions/runs/43296900039 |
 
 The Android job ran `npm ci`, `npm test`, `npm run build`, `npx cap sync android`
 and `./gradlew assembleDebug bundleRelease`, and uploaded `android-build`
 (`app-debug.apk` + unsigned `app-release.aab`).
+
+## Published release
+
+**v0.2.0** — https://github.com/khiyarusa/charkhtaz/releases/tag/v0.2.0
+
+| Asset | Size | SHA-256 | Signing |
+| --- | --- | --- | --- |
+| `app-debug.apk` | 4 507 634 B | `397e7542b776b765e2d61a724b0029f427be10ba3cc7dd0ef5e68783d1293d3d` | debug-signed, installable |
+| `app-release.aab` | 3 350 937 B | `3b370145a5cb6f837f1e6b24b32d89083a4464b6e46366afd280f7cb72a2e4a9` | **unsigned** |
+
+Both archives were downloaded and inspected: the APK contains 463 entries
+including `classes*.dex` and the web bundle under `assets/public/` (brand SVGs
+included); the AAB contains 466 entries including `BundleConfig.pb` and
+`base/manifest/AndroidManifest.xml`. Version: `versionName 0.2.0`,
+`versionCode 20`.
 
 ## Android
 
 - Workflow: `.github/workflows/android.yml` — triggered by a `v*` tag or manually.
 - Produces: debug APK (installable) and an unsigned release AAB.
 - **Not produced in this session**: the workstation has no Android SDK/JDK
-  toolchain, so `gradlew` was not run locally.
+  toolchain, so `gradlew` was not run locally; the APK/AAB above were built by
+  GitHub Actions on Ubuntu with JDK 21 and Android SDK 36.
 - Signing: no keystore is committed. A store-ready AAB requires repository
   secrets, which are not configured here.
 
 ## What is still required before a store submission
 
-1. Run the Android workflow and install the APK on a physical device (Galaxy A23
-   or equivalent).
-2. Verify three-finger pedal input, safe areas, font metrics and 60/120 Hz pacing
-   on that device.
-3. Add signing secrets and rebuild a signed AAB.
-4. Complete trademark/design clearance for the vehicle names and silhouettes.
-5. Choose and add a code/art licence.
+1. Install the published `app-debug.apk` on a physical device (Galaxy A23 or
+   equivalent) and verify three-finger pedal input, safe areas and 60/120 Hz
+   pacing.
+2. Add signing secrets and rebuild a signed AAB.
+3. Complete trademark/design clearance for the vehicle names and silhouettes.
+4. Choose and add a code/art licence.

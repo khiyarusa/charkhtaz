@@ -121,7 +121,7 @@ with the capture report in `docs/visual-qa/v0.2.0/report.json`.
 | Upgrades | Implemented, tested | `src/vehicles/upgrades.test.ts` |
 | Save + migration | Implemented, tested | `src/save/storage.test.ts` |
 | Audio | Implemented (procedural) | `src/audio/*.test.ts` |
-| Android package | CI workflow present; **not rebuilt or installed in this session** | `.github/workflows/android.yml`, `docs/BUILD-EVIDENCE.md` |
+| Android package | CI-built debug APK + unsigned AAB, published | [v0.2.0 release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.2.0) · [evidence](docs/BUILD-EVIDENCE.md) |
 | Physical device multi-touch QA | **Pending** — no phone attached | browser multi-touch only |
 | Release signing | **Pending** — debug APK only; keystore is not in the repo | `docs/BUILD-EVIDENCE.md` |
 

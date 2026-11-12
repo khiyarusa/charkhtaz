@@ -27,9 +27,9 @@ named piece is missing), **BLOCKED** (external blocker; fallback described).
 | 20 | Render interpolation | PASS | `renderPose(alpha)`, camera on the same pose; interpolation test |
 | 21 | Android performance | BLOCKED | no Android toolchain or device here; browser pacing 59.9 fps median recorded instead |
 | 22 | Save migrations | PASS | v1/v2 → v3, corrupt-save recovery, ghost and claimed-run sanitising; `storage.test.ts` |
-| 23 | CI/CD | PARTIAL | workflows present and unchanged; local build/tests green; Actions results pending the push |
+| 23 | CI/CD | PASS | web and android workflows green on `573a6aa` and on tag `v0.2.0`; artifacts uploaded (`BUILD-EVIDENCE.md`) |
 | 24 | Visual QA | PASS | 21 screenshots at 1280×720, two review cycles, defect/fix table |
-| 25 | Repository release | PARTIAL | commits and push in this session; tag and GitHub Release depend on CI |
+| 25 | Repository release | PASS | commit `a9f84d4`, tag `v0.2.0`, release with debug APK + unsigned AAB, sizes and SHA-256 recorded |
 
 ## Notes on the PARTIAL rows
 
@@ -41,5 +41,5 @@ named piece is missing), **BLOCKED** (external blocker; fallback described).
   was not available here, so the "native-quality" claim is not made.
 - **Three pedals (11):** the mechanic and multi-touch work in Chromium with three
   simultaneous touch points. Device-level verification is explicitly pending.
-- **CI/CD (23), release (25):** only what actually ran is recorded in
-  `BUILD-EVIDENCE.md`.
+- **Android performance (21):** only browser pacing is measured; the APK exists,
+  but no phone or emulator was available to run it.
