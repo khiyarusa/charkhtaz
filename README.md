@@ -82,7 +82,7 @@ Automatic cars use R / N / D and a torque-converter model with lock-up.
 | Persian RTL UI | Implemented | `docs/visual-qa/01-home.png` … `09-pause.png` |
 | Tracks / biomes / obstacles | 6 routes, 4 biomes | `src/tracks/definitions.ts` |
 | Save + migration | Implemented | `src/save/storage.ts` |
-| Android package | CI-built debug APK + unsigned AAB, published | [v0.1.2 release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.2) · [evidence](docs/BUILD-EVIDENCE.md) |
+| Android package | CI-built debug APK + unsigned AAB, published | [v0.1.3 release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.3) · [evidence](docs/BUILD-EVIDENCE.md) |
 | Audio | **Not started** | — |
 | AI opponents | **Not started** | — |
 | Ghost / time-trial replay | **Not started** | — |
@@ -116,7 +116,7 @@ src/
 ## CI
 
 Latest green runs: [web CI](https://github.com/khiyarusa/charkhtaz/actions) ·
-[Android release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.2).
+[Android release](https://github.com/khiyarusa/charkhtaz/releases/tag/v0.1.3).
 
 | Workflow | Trigger | Does |
 | --- | --- | --- |

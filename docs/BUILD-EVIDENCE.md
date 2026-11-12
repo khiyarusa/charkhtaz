@@ -8,7 +8,8 @@ Evidence for what was actually executed, not planned. Dates are UTC, 2026-11-12.
 - Milestone commits: `f5cdc51` (scaffold), `eb6b6e2` (physics), `d05772f`
   (playable slice/UI), `5bde6ee` (icon + CI), `de39d5d` (CI SDK fix).
 - Tags: `v0.1.0` (superseded before the Android runner fix), `v0.1.1` (first
-  CI-built artifacts), `v0.1.2` (source maps removed from the package).
+  CI-built artifacts), `v0.1.2` (source maps removed), `v0.1.3` (playable
+  respawn/shift fixes and climbable obstacles).
 
 ## Web CI
 
